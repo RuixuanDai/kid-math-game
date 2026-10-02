@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>童趣数学小王国 - 6岁儿童进阶益智数学大冒险</title>
+  <meta name="description" content="专为6岁幼小衔接儿童打造的高难度全能益智数学网页游戏，iPad横屏满屏沉浸体验！">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- iPad 竖屏旋转提醒遮罩 (仅在平板竖屏时温馨提示) -->
+  <div class="orientation-hint-overlay" id="orientation-hint">
+    <div class="hint-card">
+      <div class="rotate-device-icon">🔄📱</div>
+      <h2>推荐横屏游玩哦！</h2>
+      <p>把 iPad 横过来放置，画面更开阔，体验最佳大冒险！</p>
+      <button class="candy-btn btn-secondary" onclick="document.getElementById('orientation-hint').style.display='none'">
+        知道了，继续玩
+      </button>
+    </div>
+  </div>
+
+  <!-- 背景漂浮可爱云朵 -->
+  <div class="cloud cloud-1"></div>
+  <div class="cloud cloud-2"></div>
+  <div class="cloud cloud-3"></div>
+
+  <div class="game-container">
+    
+    <!-- 顶部状态栏 -->
+    <header class="header-bar">
+      <div class="game-logo">
+        <div class="logo-emoji">🦁</div>
+        <div>
+          <h1>数学小王国</h1>
+          <div class="logo-sub">iPad 高能智力版 · 幼小衔接</div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <!-- 收集的星星 -->
+        <div class="stat-pill star-pill" title="答对题目赢取小金星">
+          <span class="star-icon">⭐</span>
+          <span id="star-count">0</span>
+        </div>
+
+        <!-- 连续答对 -->
+        <div class="stat-pill streak-pill" title="连续答对次数">
+          <span>🔥</span>
+          <span id="streak-count">0</span>
+        </div>
+
+        <!-- 扭蛋屋入口 -->
+        <button id="egg-shop-btn" class="candy-btn btn-reward" title="用星星去扭蛋获得神秘萌宠">
+          <span>🎰 扭蛋机</span>
+          <span id="egg-available-badge" class="badge-tag" style="display:none;">0</span>
+        </button>
+
+        <!-- 贴纸乐园手册 -->
+        <button id="sticker-book-btn" class="candy-btn btn-secondary" title="查看收集到的萌宠贴纸">
+          <span>📖 贴纸册</span>
+        </button>
+
+        <!-- 家长指导指南 -->
+        <button id="parent-guide-btn" class="candy-btn btn-info" title="查看6岁儿童数学启蒙高阶指导建议">
+          <span>💡 导学</span>
+        </button>
+
+        <!-- 声音与全屏 -->
+        <button id="sound-toggle" class="candy-btn btn-secondary" title="开启或关闭音效">
+          🔊 声音
+        </button>
+        <button id="voice-toggle" class="candy-btn btn-secondary" title="开启或关闭语音朗读">
+          🗣️ 读题开
+        </button>
+        <button id="fullscreen-toggle" class="candy-btn btn-secondary" title="切换全屏模式">
+          🔳 全屏玩
+        </button>
+      </div>
+    </header>
+
+    <!-- 8大核心关卡导航 (iPad横屏为单排8格流线型布局) -->
+    <nav class="mode-navigation">
+      <button class="mode-nav-btn active" data-mode="counting" title="群计数与进阶点数">
+        <span class="mode-icon">🍓</span>
+        <span class="mode-title">森林数数</span>
+      </button>
+      <button class="mode-nav-btn" data-mode="comparison" title="算式比大小与倒置数对比">
+        <span class="mode-icon">⚖️</span>
+        <span class="mode-title">天平比大小</span>
+      </button>
+      <button class="mode-nav-btn" data-mode="arithmetic" title="进退位运算与未知数填空">
+        <span class="mode-icon">🍩</span>
+        <span class="mode-title">趣味加减</span>
+      </button>
+      <button class="mode-nav-btn" data-mode="patterns" title="跳跃点数与阶梯规律">
+        <span class="mode-icon">🚂</span>
+        <span class="mode-title">规律火车</span>
+      </button>
+      <button class="mode-nav-btn" data-mode="tenframes" title="新加坡数学十格阵凑十法">
+        <span class="mode-icon">🧪</span>
+        <span class="mode-title">十格阵凑十</span>
+      </button>
+      <button class="mode-nav-btn" data-mode="clocks" title="认识指针时钟与整点半点">
+        <span class="mode-icon">⏰</span>
+        <span class="mode-title">奇妙时钟</span>
+      </button>
+      <button class="mode-nav-btn" data-mode="blocks" title="3D等轴测空间积木推理">
+        <span class="mode-icon">🧩</span>
+        <span class="mode-title">空间数积木</span>
+      </button>
+      <button class="mode-nav-btn sprint-nav-btn" data-mode="speedrun" title="60秒极速计时冲刺">
+        <span class="mode-icon">⚡</span>
+        <span class="mode-title">60秒冲刺</span>
+      </button>
+    </nav>
+
+    <!-- 60秒冲刺悬浮 HUD 状态条 -->
+    <div class="speedrun-hud" id="speedrun-hud">
+      <div class="speedrun-hud-item">
+        <span>⏱️ 剩余时间:</span>
+        <span class="hud-val speedrun-timer-badge" id="speedrun-timer">60</span>s
+      </div>
+      <div class="speedrun-hud-item">
+        <span>🏆 冲刺得分:</span>
+        <span class="hud-val" id="speedrun-score">0</span>
+      </div>
+      <div class="speedrun-hud-item">
+        <span>🔥 连对爆发:</span>
+        <span class="hud-val" id="speedrun-combo">0</span>
+      </div>
+    </div>
+
+    <!-- 萌宠向导提示栏与高难度设置 -->
+    <div class="mascot-assistant-bar">
+      <div class="mascot-avatar">🦊</div>
+      <div class="mascot-speech-bubble" id="mascot-message">
+        欢迎来到进阶数学挑战！选择关卡开启高能脑力风暴吧！
+      </div>
+
+      <!-- 难度调节：10以内 / 20以内进退位 / 100以内挑战 -->
+      <div class="difficulty-selector">
+        <button class="diff-btn" data-diff="10">10以内</button>
+        <button class="diff-btn active" data-diff="20">20以内进退位</button>
+        <button class="diff-btn" data-diff="100">100以内挑战</button>
+      </div>
+    </div>
+
+    <!-- 核心互动答题卡片舞台 (全屏自适应，免滚动) -->
+    <main class="game-stage-card">
+      
+      <!-- 题目说明与语音朗读按键 -->
+      <div class="question-header">
+        <button id="speak-btn" class="speak-icon-btn" title="再读一遍题目" aria-label="朗读题目">
+          📢
+        </button>
+        <div class="question-text" id="question-text">
+          加载中...
+        </div>
+      </div>
+
+      <!-- 动态交互区域 -->
+      <div class="question-zone" id="question-zone">
+        <!-- 动态渲染题目内容 -->
+      </div>
+
+      <!-- 选择答案按钮区域 (4个大颗粒糖果按钮横排) -->
+      <div class="options-zone" id="options-zone">
+        <!-- 动态生成选项卡片 -->
+      </div>
+
+      <!-- 答题反馈动画与提示 -->
+      <div class="feedback-zone" id="feedback-zone">
+        <!-- 动态答对或鼓励提示 -->
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- 弹窗 1: 神秘扭蛋屋 -->
+  <div class="modal-overlay" id="gashapon-modal">
+    <div class="modal-card">
+      <button class="close-modal-btn" aria-label="关闭">&times;</button>
+      <div class="modal-title">🎰 萌宠幸运扭蛋屋</div>
+      <div class="modal-subtitle" id="gashapon-cost-text">当前星星: ⭐ 0 (每3颗星星可扭一次)</div>
+      
+      <div class="egg-display-box" id="gashapon-prize-display">
+        <div class="egg-preview">
+          <div class="egg-shell">🥚</div>
+          <p>快用你的智慧小金星扭出新萌宠！</p>
+        </div>
+      </div>
+
+      <button id="draw-egg-btn" class="draw-action-btn">
+        🎰 消耗 3 颗⭐ 扭蛋！
+      </button>
+    </div>
+  </div>
+
+  <!-- 弹窗 2: 萌宠贴纸收集手册 & 创意游乐场 -->
+  <div class="modal-overlay" id="sticker-book-modal">
+    <div class="modal-card">
+      <button class="close-modal-btn" aria-label="关闭">&times;</button>
+      <div class="modal-title">📖 我的萌宠贴纸乐园</div>
+      <div class="modal-subtitle">已收集伙伴: <span id="unlocked-sticker-count">0 / 12</span></div>
+
+      <!-- 选项卡切换 -->
+      <div class="sticker-tabs">
+        <button class="sticker-tab-btn active" data-tab="collection">🏆 图鉴图册</button>
+        <button class="sticker-tab-btn" data-tab="playground">🎪 创意乐园</button>
+      </div>
+
+      <!-- Tab 1: 贴纸图鉴 -->
+      <div class="sticker-tab-panel active" id="tab-collection">
+        <div class="stickers-grid" id="stickers-grid">
+          <!-- 动态渲染贴纸卡片 -->
+        </div>
+      </div>
+
+      <!-- Tab 2: 创意游乐场 (可拖拽自由拼贴) -->
+      <div class="sticker-tab-panel" id="tab-playground">
+        <div class="sticker-playground-canvas" id="sticker-playground-canvas" title="点击或拖拽萌宠自由摆放">
+          <!-- 动态放入的贴纸 -->
+        </div>
+        <div class="sub-explain">👇 点击下方贴纸放入乐园，还可以在草地上自由拖动哦！</div>
+        <div class="playground-stickers-bar" id="playground-stickers-bar">
+          <!-- 可选贴纸条 -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 弹窗 3: 60秒冲刺结算勋章卡片 -->
+  <div class="modal-overlay" id="speedrun-summary-modal">
+    <div class="modal-card">
+      <button class="close-modal-btn" aria-label="关闭">&times;</button>
+      <div class="modal-title">⚡ 60秒极速挑战成绩单</div>
+      <div class="modal-subtitle">脑力全开 · 恭喜完成极速冲刺！</div>
+
+      <div class="sprint-summary-box" id="sprint-summary-text">
+        <!-- 动态生成成绩与勋章 -->
+      </div>
+
+      <button id="restart-sprint-btn" class="draw-action-btn">
+        🚀 再来一轮挑战！
+      </button>
+    </div>
+  </div>
+
+  <!-- 弹窗 4: 高阶幼小衔接导学 -->
+  <div class="modal-overlay" id="parent-guide-modal">
+    <div class="modal-card">
+      <button class="close-modal-btn" aria-label="关闭">&times;</button>
+      <div class="modal-title">💡 6岁高阶数学启蒙培养重点</div>
+      <div class="modal-subtitle">从具象直觉跨越到小学抽象逻辑思维</div>
+
+      <div class="parent-guide-content">
+        <div class="guide-section">
+          <h4>🧪 1. 十格阵与“凑十破十法”（一年级核心）</h4>
+          <p>十格阵（Ten-Frame）是国际公认的数感模型。通过将圆点分成 5+5 阵列，帮助孩子建立“逢十进一”的结构化心算思维，轻松攻克 8+7=15 或 13-8=5 等进退位难点。</p>
+        </div>
+        <div class="guide-section">
+          <h4>⏰ 2. 奇妙时钟岛（生活时间认知）</h4>
+          <p>认识模拟表盘的短时针与长分针，理解“整点”（分针指12）与“半点”（分针指6），培养生活自理与时间观念。</p>
+        </div>
+        <div class="guide-section">
+          <h4>🧩 3. 空间数积木（3D遮挡与空间推断）</h4>
+          <p>观察立体等轴测积木堆，推测被上层积木压住的“看不见的隐藏积木”，点击“透视”可验证猜想，极大强化空间三维想象力。</p>
+        </div>
+        <div class="guide-section">
+          <h4>⚖️ 4. 算式比大小 & 两位数倒置（深度逆向思维）</h4>
+          <p>不再单纯比单个数字，而是对比算式（如 8+6 对比 15），以及 47 与 74 这类易混淆数字，预防小学常见的数位混淆问题。</p>
+        </div>
+        <div class="guide-section">
+          <h4>🚂 5. 跳跃点数与阶梯规律（乘除法前置启蒙）</h4>
+          <p>规律小火车加入 2个一数（2, 4, 6, 8）、5个一数（5, 10, 15, 20）以及递增递减，培养数感敏感度与找规律归纳能力。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 脚本加载 -->
+  <script src="js/audio.js"></script>
+  <script src="js/confetti.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

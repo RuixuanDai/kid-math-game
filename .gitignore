@@ -1,0 +1,13 @@
+# Python / Node
+__pycache__/
+*.py[cod]
+node_modules/
+dist/
+.env
+
+# System & IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
