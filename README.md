@@ -37,9 +37,22 @@
 
 ---
 
-## 🚀 启动与体验方法
+## 🌐 线上体验与 iPad 扫码直达
 
-1. 打开本地文件夹：
-   `math_game`
+- **在线访问链接**：[https://ruixuandai.github.io/kid-math-game/](https://ruixuandai.github.io/kid-math-game/)
+- **iPad / 手机扫码直达**：
+
+<p align="center">
+  <img src="qrcode.png" width="220" alt="扫码直达游戏">
+  <br>
+  <em>（使用 iPad 相机对准上方二维码即可秒开游戏）</em>
+</p>
+
+---
+
+## 🚀 本地运行与体验方法
+
+1. 打开本地文件夹：`math_game`
 2. 双击打开 [index.html](file:///d:/OneDrive%20-%20Washington%20University%20in%20St.%20Louis/2026/Workspace/kid_web_app/math_game/index.html)（推荐使用 Edge、Chrome、Safari 浏览器）。
 3. 零配置、零依赖，支持触摸屏平板电脑与全屏沉浸式体验。
+
