@@ -443,6 +443,20 @@ body {
   overflow: hidden;
 }
 
+/* 彻底禁止题目卡片内出现任何滚动条 */
+.game-stage-card,
+.game-stage-card * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.game-stage-card::-webkit-scrollbar,
+.game-stage-card *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* 题目大标题 (醒目大号字) */
 .question-header {
   display: flex;
@@ -491,7 +505,7 @@ body {
   box-shadow: 0 0 0 #F59E0B;
 }
 
-/* 题目呈现交互区 */
+/* 题目呈现交互区 (居中自适应，无滚动) */
 .question-zone {
   width: 100%;
   flex: 1;
@@ -500,23 +514,22 @@ body {
   align-items: center;
   justify-content: center;
   margin-bottom: 8px;
-  overflow: hidden;
+  overflow: visible;
 }
 
-/* 1. 数一数模式网格 (清晰大图标) */
+/* 1. 数一数模式网格 (无任何滚动条，自适应展开) */
 .counting-board {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 14px;
-  max-width: 720px;
-  max-height: min(28vh, 200px);
-  overflow-y: auto;
-  padding: 10px 16px;
+  gap: 12px 16px;
+  max-width: min(960px, 94%);
+  overflow: visible;
+  padding: 12px 20px;
   background: #F0FDF4;
   border: 2.5px dashed #86EFAC;
-  border-radius: 20px;
+  border-radius: 22px;
 }
 
 .countable-item {
@@ -565,20 +578,22 @@ body {
 
 /* 分组数数 (2个一数/5个一数) */
 .grouped-counting-board {
-  gap: 14px;
+  gap: 12px 18px;
+  max-width: min(980px, 96%);
 }
 
 .counting-group-box {
   background: white;
   border: 2.5px solid #38BDF8;
   border-radius: 18px;
-  padding: 8px 14px;
+  padding: 6px 14px;
   cursor: pointer;
   box-shadow: 0 3px 6px rgba(0,0,0,0.04);
   transition: all 0.15s;
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 160px;
 }
 
 .counting-group-box:hover {
@@ -710,9 +725,10 @@ body {
   padding: 14px 10px;
   background: linear-gradient(to bottom, transparent 80%, #94A3B8 80%, #94A3B8 88%, #64748B 88%);
   border-radius: 20px;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   max-height: min(24vh, 140px);
-  overflow-x: auto;
+  overflow: visible;
   transition: transform 0.5s ease;
 }
 

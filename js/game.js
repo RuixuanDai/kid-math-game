@@ -320,7 +320,7 @@ class MathGameApp {
     if (isGroupCount) {
       // 进阶：2个一组或5个一组数数！(幼小衔接乘法与群计数启蒙)
       const groupSize = (this.difficulty === '100') ? 5 : 2;
-      const numGroups = (this.difficulty === '100') ? Math.floor(Math.random() * 6) + 3 : Math.floor(Math.random() * 6) + 3; // 3~8组
+      const numGroups = (groupSize === 5) ? Math.floor(Math.random() * 3) + 3 : Math.floor(Math.random() * 4) + 3;
       const total = groupSize * numGroups;
 
       const title = `${groupSize}个一组数一数：这里一共有多少个 ${emoji}？`;
