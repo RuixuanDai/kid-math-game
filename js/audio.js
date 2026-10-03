@@ -275,19 +275,34 @@ class SoundManager {
     }
   }
 
-  // 语音播报（升级自然柔和幼教人声：语调设为1.0自然真声，语速从容，杜绝尖锐电子音）
+  // 过滤 Emoji 表情与特殊图形符号，确保语音朗读时不读出 emoji 名字（如“派对礼花”、“肌肉”等）
+  cleanSpeechText(text) {
+    if (!text || typeof text !== 'string') return '';
+    return text
+      // 过滤各类 Emoji、象形符号、杂项符号、变音符与拼装符
+      .replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F6FF}\u{FE00}-\u{FE0F}\u{200D}\u{2300}-\u{23FF}\u{2B50}]/gu, '')
+      // 将数学符号转化为亲切口语
+      .replace(/\+/g, ' 加 ')
+      .replace(/-/g, ' 减 ')
+      .replace(/=/g, ' 等于 ')
+      .replace(/\?/g, '？')
+      .replace(/!/g, '！')
+      // 标点去重与多余空格整理
+      .replace(/[！!]+/g, '！')
+      .replace(/[？?]+/g, '？')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // 语音播报（升级自然柔和幼教人声：语调设为1.0自然真声，语速从容，杜绝尖锐电子音，且自动剥离emoji）
   speak(text) {
     if (!this.voiceEnabled || !('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.cancel(); // 停止当前正在说的内容
 
-      // 文本语感润色：将数学符号替换为自然口语词汇，避免生硬读出
-      const polished = text
-        .replace(/\+/g, ' 加 ')
-        .replace(/-/g, ' 减 ')
-        .replace(/=/g, ' 等于 ')
-        .replace(/\?/g, '？')
-        .replace(/!/g, '！');
+      // 文本语感润色与Emoji清洗
+      const polished = this.cleanSpeechText(text);
+      if (!polished) return; // 若全是表情，清理后为空则不发音
 
       const utterance = new SpeechSynthesisUtterance(polished);
       utterance.lang = 'zh-CN';

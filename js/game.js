@@ -674,7 +674,9 @@ class MathGameApp {
     }
 
     this.questionTextEl.innerHTML = `找规律小火车：<span>${descText}</span> 🚂`;
-    const audioPrompt = `看一看小火车的车厢数字规律，最后一节车厢装什么呢？`;
+    const audioPrompt = typeof answer === 'number'
+      ? `看一看小火车的车厢数字规律，最后一节车厢装什么呢？`
+      : `看一看小火车的车厢图案规律，最后一节车厢装什么呢？`;
 
     this.currentQuestion = {
       answer: answer,
