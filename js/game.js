@@ -815,7 +815,7 @@ class MathGameApp {
       };
 
       const container = document.createElement('div');
-      container.className = 'ten-frame-wrapper';
+      container.className = 'ten-frame-wrapper single-frame';
 
       const frame = document.createElement('div');
       frame.className = 'ten-frame';
@@ -828,6 +828,11 @@ class MathGameApp {
         } else {
           cell.innerHTML = `<span class="ten-dot empty-dot">⚪</span>`;
         }
+        cell.addEventListener('click', () => {
+          window.soundManager.playPop();
+          cell.classList.add('wobble');
+          setTimeout(() => cell.classList.remove('wobble'), 350);
+        });
         frame.appendChild(cell);
       }
 
@@ -860,19 +865,28 @@ class MathGameApp {
       // 渲染两个十格阵并标示凑十过程
       container.innerHTML = `
         <div class="ten-frame-box">
-          <div class="frame-label">第一格 (满 10): 🔴 × ${num1} + 🟡 × ${needToMake10}</div>
+          <div class="frame-label">第一盒 (凑满 10): 🔴 × ${num1} + 🟡 × ${needToMake10}</div>
           <div class="ten-frame">
-            ${Array.from({length: 10}, (_, i) => `<div class="ten-frame-cell"><span class="ten-dot">${i < num1 ? '🔴' : '🟡'}</span></div>`).join('')}
+            ${Array.from({length: 10}, (_, i) => `<div class="ten-frame-cell" data-idx="${i+1}"><span class="ten-dot">${i < num1 ? '🔴' : '🟡'}</span></div>`).join('')}
           </div>
         </div>
         <div class="frame-plus">➕</div>
         <div class="ten-frame-box">
-          <div class="frame-label">第二格 (还剩 ${remain}): 🟡 × ${remain}</div>
+          <div class="frame-label">第二盒 (还剩 ${remain}): 🟡 × ${remain}</div>
           <div class="ten-frame">
-            ${Array.from({length: 10}, (_, i) => `<div class="ten-frame-cell"><span class="ten-dot">${i < remain ? '🟡' : '⚪'}</span></div>`).join('')}
+            ${Array.from({length: 10}, (_, i) => `<div class="ten-frame-cell" data-idx="${i+1}"><span class="ten-dot">${i < remain ? '🟡' : '⚪'}</span></div>`).join('')}
           </div>
         </div>
       `;
+
+      // 给双盒模式每一个点阵格子添加点击触感反馈
+      container.querySelectorAll('.ten-frame-cell').forEach(cell => {
+        cell.addEventListener('click', () => {
+          window.soundManager.playPop();
+          cell.classList.add('wobble');
+          setTimeout(() => cell.classList.remove('wobble'), 350);
+        });
+      });
 
       this.questionZoneEl.appendChild(container);
       const options = this.generateChoices(total, 11, 18, 4);
