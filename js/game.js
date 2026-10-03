@@ -272,9 +272,9 @@ class MathGameApp {
         { diff: '100', label: '破十挑战', tip: '拆十法与高阶运算' }
       ],
       clocks: [
-        { diff: '10', label: '认识整点', tip: '时针分针整点认读 (如 3:00)' },
-        { diff: '20', label: '认识半点', tip: '半点认读 (如 2:30)' },
-        { diff: '100', label: '一刻与三刻', tip: '15分与45分高阶时刻' }
+        { diff: '10', label: '认识整点', tip: '基础入门：分针指向12，整点认读 (如 3:00)' },
+        { diff: '20', label: '整点与半点', tip: '核心进阶：整点与半点随机切换与易错对比' },
+        { diff: '100', label: '几时几分', tip: '高阶挑战：一刻(15分)、三刻(45分)与各刻度' }
       ],
       blocks: [
         { diff: '10', label: '初级 (4~6块)', tip: '2层基础立体积木堆' },
@@ -883,14 +883,22 @@ class MathGameApp {
     let minute = 0;
 
     if (this.difficulty === '10') {
-      // 整点 (如 3:00, 8:00)
+      // 认识整点: 100% 整点 (如 3:00, 8:00)
       minute = 0;
     } else if (this.difficulty === '20') {
-      // 半点 (如 2:30, 9:30)
-      minute = 30;
+      // 整点与半点: 随机切换整点与半点，强化对比（彻底告别固定30分）！
+      // 避免连续只出同一种，实现整点与半点交替出现
+      if (this.lastClockMinute === 30) {
+        minute = Math.random() > 0.35 ? 0 : 30;
+      } else if (this.lastClockMinute === 0) {
+        minute = Math.random() > 0.35 ? 30 : 0;
+      } else {
+        minute = Math.random() > 0.5 ? 30 : 0;
+      }
+      this.lastClockMinute = minute;
     } else {
-      // 100以内高阶：15分/45分 (一刻钟/三刻钟)
-      const minutesList = [0, 15, 30, 45];
+      // 几时几分(高阶): 包含 15分(一刻)、30分(半点)、45分(三刻)、整点以及常见刻度
+      const minutesList = [0, 15, 30, 45, 10, 20, 50];
       minute = minutesList[Math.floor(Math.random() * minutesList.length)];
     }
 
@@ -898,7 +906,11 @@ class MathGameApp {
     const correctTimeStr = `${hour}:${minStr}`;
 
     const title = minute === 0 ? `看一看时钟：现在是几点整？` : `看一看时钟：现在是几点几分？`;
-    const audioPrompt = `仔细看时钟的时针和分针，现在的指针指向几点呢？`;
+    const audioPrompt = minute === 0 
+      ? `仔细看时针和分针，现在的指针指向几点整呢？`
+      : (minute === 30 
+          ? `仔细看时针和分针，现在的指针指向几点半呢？`
+          : `仔细看时针和分针，现在的指针指向几点几分呢？`);
 
     this.currentQuestion = {
       answer: correctTimeStr,
@@ -919,10 +931,24 @@ class MathGameApp {
     let numbersHtml = '';
     for (let h = 1; h <= 12; h++) {
       const angle = (h * 30 - 90) * (Math.PI / 180);
-      const r = 72;
+      const r = 70;
       const x = 100 + r * Math.cos(angle);
-      const y = 100 + r * Math.sin(angle) + 5;
+      const y = 100 + r * Math.sin(angle) + 6;
       numbersHtml += `<text x="${x}" y="${y}" class="clock-num" text-anchor="middle">${h}</text>`;
+    }
+
+    // 表盘刻度点 (12个大刻度与分针小刻度，让钟表更真实生动)
+    let ticksHtml = '';
+    for (let m = 0; m < 60; m += 5) {
+      const angle = (m * 6 - 90) * (Math.PI / 180);
+      const isHourTick = (m % 15 === 0);
+      const r1 = isHourTick ? 84 : 86;
+      const r2 = 90;
+      const x1 = 100 + r1 * Math.cos(angle);
+      const y1 = 100 + r1 * Math.sin(angle);
+      const x2 = 100 + r2 * Math.cos(angle);
+      const y2 = 100 + r2 * Math.sin(angle);
+      ticksHtml += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${isHourTick ? '#334155' : '#94A3B8'}" stroke-width="${isHourTick ? 2.5 : 1.5}" stroke-linecap="round" />`;
     }
 
     clockContainer.innerHTML = `
@@ -931,14 +957,17 @@ class MathGameApp {
         <circle cx="100" cy="100" r="95" class="clock-face-outer" />
         <circle cx="100" cy="100" r="88" class="clock-face-inner" />
         
+        <!-- 表盘刻度 -->
+        ${ticksHtml}
+
         <!-- 数字 1 ~ 12 -->
         ${numbersHtml}
         
-        <!-- 时针 (短蓝色) -->
+        <!-- 时针 (短粗蓝色) -->
         <line x1="100" y1="100" x2="100" y2="52" class="clock-hand hour-hand" transform="rotate(${hourAngle} 100 100)" />
         
-        <!-- 分针 (长红色) -->
-        <line x1="100" y1="100" x2="100" y2="30" class="clock-hand minute-hand" transform="rotate(${minAngle} 100 100)" />
+        <!-- 分针 (长细红色) -->
+        <line x1="100" y1="100" x2="100" y2="28" class="clock-hand minute-hand" transform="rotate(${minAngle} 100 100)" />
         
         <!-- 中心圆轴点 -->
         <circle cx="100" cy="100" r="6" class="clock-center-pin" />
@@ -951,15 +980,46 @@ class MathGameApp {
 
     this.questionZoneEl.appendChild(clockContainer);
 
-    // 生成干扰项 (例如相同小时不同分钟，或者相同分钟不同小时)
+    // 生成针对性的高质量时钟选项（含幼小衔接易错陷阱）
     const choices = new Set([correctTimeStr]);
+
+    if (minute === 0) {
+      if (this.difficulty !== '10') {
+        choices.add(`${hour}:30`);
+      }
+      const prevH = (hour - 2 + 12) % 12 + 1;
+      const nextH = hour % 12 + 1;
+      choices.add(`${prevH}:00`);
+      choices.add(`${nextH}:00`);
+    } else if (minute === 30) {
+      const nextH = hour % 12 + 1;
+      choices.add(`${nextH}:30`);
+      choices.add(`${hour}:00`);
+      const prevH = (hour - 2 + 12) % 12 + 1;
+      choices.add(`${prevH}:30`);
+    } else {
+      const altM = [0, 15, 30, 45].filter(m => m !== minute);
+      altM.forEach(m => {
+        const mStr = m < 10 ? `0${m}` : m.toString();
+        if (choices.size < 3) choices.add(`${hour}:${mStr}`);
+      });
+      const nextH = hour % 12 + 1;
+      choices.add(`${nextH}:${minStr}`);
+    }
+
     while (choices.size < 4) {
-      let hOffset = Math.floor(Math.random() * 5) - 2;
-      let fakeH = ((hour + hOffset - 1 + 12) % 12) + 1;
-      let mList = (this.difficulty === '10') ? [0] : [0, 30, 15, 45];
-      let fakeM = mList[Math.floor(Math.random() * mList.length)];
-      let fakeMStr = fakeM < 10 ? `0${fakeM}` : fakeM.toString();
-      choices.add(`${fakeH}:${fakeMStr}`);
+      const randH = Math.floor(Math.random() * 12) + 1;
+      let randM = 0;
+      if (this.difficulty === '10') {
+        randM = 0;
+      } else if (this.difficulty === '20') {
+        randM = Math.random() > 0.5 ? 30 : 0;
+      } else {
+        const mPool = [0, 15, 30, 45, 10, 20, 50];
+        randM = mPool[Math.floor(Math.random() * mPool.length)];
+      }
+      const mStr = randM < 10 ? `0${randM}` : randM.toString();
+      choices.add(`${randH}:${mStr}`);
     }
 
     const options = Array.from(choices).sort(() => 0.5 - Math.random());
