@@ -1041,10 +1041,11 @@ body {
   background: #FFEDD5;
 }
 
-/* 选项区域 (特大号选项文字，清晰有力) */
+/* 选项区域 (特大号选项文字，清晰有力，自适应水平居中) */
 .options-zone {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 16px;
   width: 100%;
   max-width: 860px;
@@ -1053,6 +1054,8 @@ body {
 }
 
 .option-card {
+  flex: 1 1 0;
+  max-width: 200px;
   min-width: 0;
   height: min(11vh, 82px);
   background: white;
@@ -1070,6 +1073,11 @@ body {
   justify-content: center;
   transition: all 0.12s ease;
   touch-action: manipulation;
+}
+
+.options-zone.has-3-options .option-card,
+.option-card.balance-option-btn {
+  max-width: 240px;
 }
 
 .option-card:hover:not(:disabled) {

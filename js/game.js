@@ -337,6 +337,7 @@ class MathGameApp {
     this.countedItems.clear();
     this.questionZoneEl.innerHTML = '';
     this.optionsZoneEl.innerHTML = '';
+    this.optionsZoneEl.className = 'options-zone';
     this.feedbackZoneEl.innerHTML = '';
     this.feedbackZoneEl.className = 'feedback-zone';
 
@@ -563,6 +564,8 @@ class MathGameApp {
       { val: '=', label: '一样大 🤝' },
       { val: '<', label: '右边大 👉' }
     ];
+
+    this.optionsZoneEl.classList.add('has-3-options');
 
     optionsData.forEach(opt => {
       const btn = document.createElement('button');
