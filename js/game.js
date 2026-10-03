@@ -64,6 +64,7 @@ class MathGameApp {
     this.speedrunScoreEl = document.getElementById('speedrun-score');
     this.speedrunComboEl = document.getElementById('speedrun-combo');
     this.speedrunSummaryModal = document.getElementById('speedrun-summary-modal');
+    this.difficultySelectorEl = document.getElementById('difficulty-selector');
   }
 
   bindEvents() {
@@ -85,17 +86,19 @@ class MathGameApp {
       });
     });
 
-    // 难度切换 (10 / 20 / 100)
-    document.querySelectorAll('.diff-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    // 难度切换 (事件代理到容器，无缝支持动态关卡标签)
+    if (this.difficultySelectorEl) {
+      this.difficultySelectorEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('.diff-btn');
+        if (!btn) return;
+        this.difficultySelectorEl.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.difficulty = btn.dataset.diff;
         window.soundManager.playPop();
-        this.setMascot("调整为：" + btn.textContent + "！我们来迎接更精彩的挑战！");
+        this.setMascot("难度调整为：" + btn.textContent + "！继续冲冲冲！");
         this.generateQuestion();
       });
-    });
+    }
 
     // 朗读题目
     const speakBtn = document.getElementById('speak-btn');
@@ -215,6 +218,8 @@ class MathGameApp {
     }
 
     this.currentMode = mode;
+    this.updateDifficultySelector(mode);
+
     document.querySelectorAll('.mode-nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.mode === mode);
     });
@@ -237,6 +242,64 @@ class MathGameApp {
     } else {
       this.generateQuestion();
     }
+  }
+
+  getModeDifficulties(mode) {
+    const diffMap = {
+      counting: [
+        { diff: '10', label: '10以内点数', tip: '基础单体逐个点数' },
+        { diff: '20', label: '20以内点数', tip: '进阶点数挑战' },
+        { diff: '100', label: '群组数数(分组)', tip: '2/5个一组，分组群计数' }
+      ],
+      comparison: [
+        { diff: '10', label: '单数比大小', tip: '10以内数字大小比较' },
+        { diff: '20', label: '算式比大小', tip: '加减算式与数字对比' },
+        { diff: '100', label: '百数比大小', tip: '两位数与易混倒置数' }
+      ],
+      arithmetic: [
+        { diff: '10', label: '10以内加减', tip: '基础不进位加减法' },
+        { diff: '20', label: '20以内进退位', tip: '凑十破十与未知数填空' },
+        { diff: '100', label: '100以内挑战', tip: '整十数与连加连减大挑战' }
+      ],
+      patterns: [
+        { diff: '10', label: '图案规律', tip: '水果图形AB/ABB循环' },
+        { diff: '20', label: '跳跃数数', tip: '双数跳数与倒数规律' },
+        { diff: '100', label: '百数规律', tip: '加3、加4、加10进阶规律' }
+      ],
+      tenframes: [
+        { diff: '10', label: '单盒凑十', tip: '10格阵红点补足10' },
+        { diff: '20', label: '双盒进位', tip: '双盒凑十进位加法' },
+        { diff: '100', label: '破十挑战', tip: '拆十法与高阶运算' }
+      ],
+      clocks: [
+        { diff: '10', label: '认识整点', tip: '时针分针整点认读 (如 3:00)' },
+        { diff: '20', label: '认识半点', tip: '半点认读 (如 2:30)' },
+        { diff: '100', label: '一刻与三刻', tip: '15分与45分高阶时刻' }
+      ],
+      blocks: [
+        { diff: '10', label: '初级 (4~6块)', tip: '2层基础立体积木堆' },
+        { diff: '20', label: '进阶 (7~9块)', tip: '含隐藏积木，空间推理' },
+        { diff: '100', label: '挑战 (10~14块)', tip: '3层多层立体透视挑战' }
+      ]
+    };
+    return diffMap[mode] || null;
+  }
+
+  updateDifficultySelector(mode) {
+    if (!this.difficultySelectorEl) return;
+    if (mode === 'speedrun') {
+      this.difficultySelectorEl.style.display = 'none';
+      return;
+    }
+    this.difficultySelectorEl.style.display = 'flex';
+    const configs = this.getModeDifficulties(mode);
+    if (!configs) return;
+
+    this.difficultySelectorEl.innerHTML = configs.map(cfg => `
+      <button class="diff-btn ${this.difficulty === cfg.diff ? 'active' : ''}" 
+              data-diff="${cfg.diff}" 
+              title="${cfg.tip}">${cfg.label}</button>
+    `).join('');
   }
 
   setMascot(text) {
@@ -907,8 +970,7 @@ class MathGameApp {
   generateBlocksQuestion() {
     this.xrayActive = false;
 
-    // 随机生成一个稳定的 3D 积木堆（包含被前排压住的隐藏基础积木）
-    // 积木网格: 3x3 空间，每一格有高度 height (0~2)
+    // 积木网格: 3x3 空间，每一格有高度 height
     let grid = [
       [0, 0, 0],
       [0, 0, 0],
@@ -916,25 +978,76 @@ class MathGameApp {
     ];
 
     let totalBlocks = 0;
-    const maxLayer = this.difficulty === '10' ? 2 : 3;
 
-    // 随机生成几根柱子
-    const pillarsCount = this.difficulty === '10' ? 3 : 5;
-    for (let i = 0; i < pillarsCount; i++) {
-      const x = Math.floor(Math.random() * 3);
-      const y = Math.floor(Math.random() * 3);
-      const h = Math.floor(Math.random() * maxLayer) + 1;
-      grid[x][y] = Math.max(grid[x][y], h);
-    }
+    if (this.difficulty === '10') {
+      // 初级：4~6块积木，2层基础立体堆，直观容易数
+      const targetCount = Math.floor(Math.random() * 3) + 4; // 4, 5, 6
+      let placed = 0;
+      const coords = [
+        [0,0], [0,1], [0,2],
+        [1,0], [1,1], [1,2],
+        [2,0], [2,1], [2,2]
+      ].sort(() => 0.5 - Math.random());
 
-    // 确保至少有 1 个积木处于第 2 层以上（这样一定有下层隐藏积木，考察空间推理！）
-    if (grid[1][1] < 2) grid[1][1] = 2;
-
-    // 统计总块数
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        totalBlocks += grid[r][c];
+      for (const [r, c] of coords) {
+        if (placed >= targetCount) break;
+        const remaining = targetCount - placed;
+        const h = Math.min(2, remaining > 1 && Math.random() > 0.4 ? 2 : 1);
+        grid[r][c] = h;
+        placed += h;
       }
+      totalBlocks = placed;
+
+    } else if (this.difficulty === '20') {
+      // 进阶：7~9块积木，2~3层，保证有下层被压住的隐藏积木（空间思维训练！）
+      const targetCount = Math.floor(Math.random() * 3) + 7; // 7, 8, 9
+      let placed = 0;
+      // 保证中间或后排至少有2层
+      grid[1][1] = 2;
+      placed += 2;
+
+      const coords = [
+        [0,0], [0,1], [0,2],
+        [1,0], [1,2],
+        [2,0], [2,1], [2,2]
+      ].sort(() => 0.5 - Math.random());
+
+      for (const [r, c] of coords) {
+        if (placed >= targetCount) break;
+        const remaining = targetCount - placed;
+        const maxH = Math.random() > 0.6 ? 3 : 2;
+        const h = Math.min(maxH, remaining);
+        if (h > 0) {
+          grid[r][c] = h;
+          placed += h;
+        }
+      }
+      totalBlocks = placed;
+
+    } else {
+      // 挑战：10~14块积木，3层立体建筑，考验多层空间透视推理
+      const targetCount = Math.floor(Math.random() * 5) + 10; // 10~14
+      let placed = 0;
+      grid[0][0] = 2;
+      grid[0][1] = 3;
+      grid[1][1] = 3;
+      placed = 8;
+
+      const coords = [
+        [0,2], [1,0], [1,2],
+        [2,0], [2,1], [2,2]
+      ].sort(() => 0.5 - Math.random());
+
+      for (const [r, c] of coords) {
+        if (placed >= targetCount) break;
+        const remaining = targetCount - placed;
+        const h = Math.min(2, remaining);
+        if (h > 0) {
+          grid[r][c] = h;
+          placed += h;
+        }
+      }
+      totalBlocks = placed;
     }
 
     this.questionTextEl.innerHTML = `空间数积木：<span>数一数，一共有多少块积木？</span> 🧩`;
@@ -946,20 +1059,55 @@ class MathGameApp {
       type: 'blocks'
     };
 
-    // 绘制等轴测 3D 积木 (Isometric SVG)
+    // 绘制大幅超清等轴测 3D 积木 (Isometric SVG)
     const blockContainer = document.createElement('div');
     blockContainer.className = 'isometric-blocks-container';
     blockContainer.id = 'blocks-stage';
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 320 280');
     svg.setAttribute('class', 'isometric-svg');
 
-    const originX = 160;
-    const originY = 80;
-    const tileW = 48;
-    const tileH = 26;
-    const cubeH = 34;
+    // 积木单体尺寸大幅放大（tileW 84, tileH 46, cubeH 58）
+    const tileW = 84;
+    const tileH = 46;
+    const cubeH = 58;
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+    // 先计算所有积木顶点的外接包围盒，以便自适应 viewBox
+    for (let x = 0; x < 3; x++) {
+      for (let y = 0; y < 3; y++) {
+        if (grid[x][y] > 0) {
+          for (let z = 0; z < grid[x][y]; z++) {
+            const posX = (x - y) * (tileW / 2);
+            const posY = (x + y) * (tileH / 2) - z * cubeH;
+            const pts = [
+              [posX, posY - tileH / 2],
+              [posX + tileW / 2, posY],
+              [posX, posY + tileH / 2],
+              [posX - tileW / 2, posY],
+              [posX - tileW / 2, posY + cubeH],
+              [posX, posY + tileH / 2 + cubeH],
+              [posX + tileW / 2, posY + cubeH]
+            ];
+            pts.forEach(([px, py]) => {
+              if (px < minX) minX = px;
+              if (px > maxX) maxX = px;
+              if (py < minY) minY = py;
+              if (py > maxY) maxY = py;
+            });
+          }
+        }
+      }
+    }
+
+    // 设置紧凑完美的 viewBox，让积木铺满画布，视觉面积放大 4~5 倍！
+    const pad = 24;
+    const vbW = Math.round(maxX - minX + pad * 2);
+    const vbH = Math.round(maxY - minY + pad * 2);
+    const vbX = Math.round(minX - pad);
+    const vbY = Math.round(minY - pad);
+    svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
 
     // 按照从后向前、从下到上的顺序渲染，保证遮挡关系正确
     for (let sum = 0; sum <= 4; sum++) {
@@ -967,12 +1115,20 @@ class MathGameApp {
         let y = sum - x;
         if (x < 3 && y < 3 && grid[x][y] > 0) {
           for (let z = 0; z < grid[x][y]; z++) {
-            const posX = originX + (x - y) * (tileW / 2);
-            const posY = originY + (x + y) * (tileH / 2) - z * cubeH;
+            const posX = (x - y) * (tileW / 2);
+            const posY = (x + y) * (tileH / 2) - z * cubeH;
 
             // 绘制一个 3D 立方体：顶面、左面、右面
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             g.setAttribute('class', 'isometric-cube');
+            g.setAttribute('title', '点击点亮积木');
+
+            // 交互：点击积木会有金色高亮提示和清脆音效
+            g.addEventListener('click', (e) => {
+              e.stopPropagation();
+              window.soundManager.playPop();
+              g.classList.toggle('cube-clicked');
+            });
 
             // 顶面
             const topPolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
@@ -1002,7 +1158,7 @@ class MathGameApp {
 
     // 透视辅助按钮 (培养孩子的空间透视直觉)
     const xrayBtn = document.createElement('button');
-    xrayBtn.className = 'candy-btn btn-secondary xray-toggle-btn';
+    xrayBtn.className = 'xray-toggle-btn';
     xrayBtn.innerHTML = `🔍 开启透视模式（找找隐藏积木）`;
     xrayBtn.addEventListener('click', () => {
       this.xrayActive = !this.xrayActive;

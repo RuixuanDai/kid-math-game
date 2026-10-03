@@ -413,11 +413,13 @@ body {
   background: transparent;
   padding: 5px 12px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 800;
   color: #64748B;
   cursor: pointer;
-  transition: all 0.15s;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  user-select: none;
 }
 
 .diff-btn.active {
@@ -931,62 +933,101 @@ body {
   color: #EF4444;
 }
 
-/* 7. 空间数积木 (Isometric 3D Blocks) 样式 */
+/* 7. 空间数积木 (Isometric 3D Blocks) 样式：超大清晰、醒目立体 */
 .isometric-blocks-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   max-height: 100%;
   justify-content: center;
+  flex: 1;
 }
 
 .isometric-svg {
-  height: min(28vh, 190px);
+  height: min(42vh, 310px);
+  max-width: min(88vw, 460px);
   width: auto;
-  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
+  filter: drop-shadow(0 12px 28px rgba(180, 83, 9, 0.18));
+  overflow: visible;
+  transition: all 0.3s ease;
+}
+
+.isometric-cube {
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.isometric-cube:hover {
+  filter: brightness(1.08);
+}
+
+.isometric-cube.cube-clicked {
+  filter: brightness(1.22) drop-shadow(0 0 10px rgba(245, 158, 11, 0.85));
 }
 
 .cube-face-top {
   fill: #FDE68A;
   stroke: #B45309;
-  stroke-width: 1.5;
+  stroke-width: 2.4;
+  stroke-linejoin: round;
   transition: all 0.25s ease;
 }
 
 .cube-face-left {
   fill: #F59E0B;
   stroke: #B45309;
-  stroke-width: 1.5;
+  stroke-width: 2.4;
+  stroke-linejoin: round;
   transition: all 0.25s ease;
 }
 
 .cube-face-right {
   fill: #D97706;
   stroke: #B45309;
-  stroke-width: 1.5;
+  stroke-width: 2.4;
+  stroke-linejoin: round;
   transition: all 0.25s ease;
 }
 
 .isometric-svg.xray-mode .cube-face-top {
-  fill: rgba(253, 230, 138, 0.45);
-  stroke-dasharray: 4, 3;
+  fill: rgba(254, 243, 199, 0.45);
+  stroke: #D97706;
+  stroke-width: 2.2;
+  stroke-dasharray: 6, 4;
 }
 
 .isometric-svg.xray-mode .cube-face-left {
   fill: rgba(245, 158, 11, 0.45);
-  stroke-dasharray: 4, 3;
+  stroke: #D97706;
+  stroke-width: 2.2;
+  stroke-dasharray: 6, 4;
 }
 
 .isometric-svg.xray-mode .cube-face-right {
   fill: rgba(217, 119, 6, 0.45);
-  stroke-dasharray: 4, 3;
+  stroke: #D97706;
+  stroke-width: 2.2;
+  stroke-dasharray: 6, 4;
 }
 
 .xray-toggle-btn {
-  font-size: 14px;
-  padding: 6px 16px;
-  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 8px 24px;
+  border-radius: 22px;
+  background: #FFF7ED;
+  color: #C2410C;
+  border: 2px solid #FDBA74;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+}
+
+.xray-toggle-btn:hover, .xray-toggle-btn:active {
+  transform: translateY(-2px);
+  background: #FFEDD5;
 }
 
 /* 选项区域 (特大号选项文字，清晰有力) */
