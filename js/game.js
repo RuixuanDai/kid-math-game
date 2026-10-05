@@ -945,6 +945,21 @@ class MathGameApp {
     const minAngle = minute * 6; // 360 / 60
     const hourAngle = (hour % 12 + minute / 60) * 30; // 360 / 12
 
+    // 采用数学三角函数直接计算针尖与针尾的精确坐标（彻底杜绝 Safari/iPad 上 transform 旋转兼容性丢失）
+    const rHour = 36;
+    const hRad = (hourAngle - 90) * (Math.PI / 180);
+    const hX1 = (100 - 8 * Math.cos(hRad)).toFixed(2);
+    const hY1 = (100 - 8 * Math.sin(hRad)).toFixed(2);
+    const hX2 = (100 + rHour * Math.cos(hRad)).toFixed(2);
+    const hY2 = (100 + rHour * Math.sin(hRad)).toFixed(2);
+
+    const rMin = 56;
+    const mRad = (minAngle - 90) * (Math.PI / 180);
+    const mX1 = (100 - 10 * Math.cos(mRad)).toFixed(2);
+    const mY1 = (100 - 10 * Math.sin(mRad)).toFixed(2);
+    const mX2 = (100 + rMin * Math.cos(mRad)).toFixed(2);
+    const mY2 = (100 + rMin * Math.sin(mRad)).toFixed(2);
+
     let numbersHtml = '';
     for (let h = 1; h <= 12; h++) {
       const angle = (h * 30 - 90) * (Math.PI / 180);
@@ -980,14 +995,14 @@ class MathGameApp {
         <!-- 数字 1 ~ 12 -->
         ${numbersHtml}
         
-        <!-- 时针 (短粗蓝色) -->
-        <line x1="100" y1="100" x2="100" y2="52" class="clock-hand hour-hand" transform="rotate(${hourAngle} 100 100)" />
+        <!-- 时针 (短粗蓝色，直接使用绝对坐标) -->
+        <line x1="${hX1}" y1="${hY1}" x2="${hX2}" y2="${hY2}" class="clock-hand hour-hand" />
         
-        <!-- 分针 (长细红色) -->
-        <line x1="100" y1="100" x2="100" y2="28" class="clock-hand minute-hand" transform="rotate(${minAngle} 100 100)" />
+        <!-- 分针 (长细红色，直接使用绝对坐标) -->
+        <line x1="${mX1}" y1="${mY1}" x2="${mX2}" y2="${mY2}" class="clock-hand minute-hand" />
         
         <!-- 中心圆轴点 -->
-        <circle cx="100" cy="100" r="6" class="clock-center-pin" />
+        <circle cx="100" cy="100" r="7" class="clock-center-pin" />
       </svg>
       <div class="clock-legend">
         <span class="legend-hour">🟦 短针是时针</span>
