@@ -1490,13 +1490,6 @@ class MathGameApp {
 
     const canvas = document.createElement('canvas');
     canvas.className = 'blocks-3d-canvas';
-    const cssW = 460;
-    const cssH = 265;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-    canvas.width = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
-    canvas.style.width = `${cssW}px`;
-    canvas.style.height = `${cssH}px`;
 
     const rotateHintBadge = document.createElement('div');
     rotateHintBadge.className = 'blocks-rotate-hint';
@@ -1510,10 +1503,12 @@ class MathGameApp {
     counterBadge.className = 'block-counter-pill';
     counterBadge.textContent = '✨ 已点亮: 0 块';
 
-    // 构建 3D 立方体列表 (gx, gy, gz)
+    // 构建 3D 立方体列表 (gx, gy, gz) 并计算最高层数
     const cubes = [];
+    let maxColH = 1;
     for (let gx = 0; gx < 3; gx++) {
       for (let gy = 0; gy < 3; gy++) {
+        if (grid[gx][gy] > maxColH) maxColH = grid[gx][gy];
         for (let gz = 0; gz < grid[gx][gy]; gz++) {
           cubes.push({
             gx,
@@ -1531,9 +1526,30 @@ class MathGameApp {
     const defaultPitch = Math.PI * 0.175;
     let yaw = defaultYaw;
     let pitch = defaultPitch;
-    const scale = 52;
-    const centerX = cssW / 2;
-    const centerY = cssH * 0.60;
+
+    // 自适应画布尺寸与超大 3D 积木缩放比例
+    let cssW = 780;
+    let cssH = 380;
+    let scale = 82;
+    let centerX = cssW / 2;
+    let centerY = cssH * 0.62;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+
+    const updateCanvasSize = () => {
+      const rect = canvasWrap.getBoundingClientRect();
+      cssW = Math.max(480, Math.round((rect.width || 780) - 16));
+      cssH = Math.max(250, Math.round((rect.height || 380) - 10));
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
+
+      // 根据当前画布高度和积木最高层数，最大化积木单体尺寸且保证旋转不裁切
+      const vSpan = maxColH >= 3 ? 4.45 : 3.85;
+      scale = Math.min(cssW / 4.8, cssH / vSpan);
+      centerX = cssW / 2;
+      centerY = cssH * (maxColH >= 3 ? 0.63 : 0.60);
+    };
 
     // 存放当前帧前面可点击的 2D 多边形用于精确点击拾取
     let interactivePolys = [];
@@ -1752,15 +1768,17 @@ class MathGameApp {
         // 如果该积木已被点击点亮，在其中心绘制醒目的序号徽章
         if (cube.clicked && cube.clickOrder > 0) {
           const centerPt = projectPoint(x0 + 0.5, y0 + 0.5, z0 + 0.55);
+          const badgeR = Math.max(14, Math.round(scale * 0.22));
+          const fontSize = Math.max(14, Math.round(scale * 0.24));
           ctx.beginPath();
-          ctx.arc(centerPt.x, centerPt.y, 13, 0, Math.PI * 2);
+          ctx.arc(centerPt.x, centerPt.y, badgeR, 0, Math.PI * 2);
           ctx.fillStyle = '#FFFFFF';
           ctx.fill();
           ctx.strokeStyle = '#059669';
-          ctx.lineWidth = 2.2;
+          ctx.lineWidth = 2.5;
           ctx.stroke();
 
-          ctx.font = '900 14px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+          ctx.font = `900 ${fontSize}px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
           ctx.fillStyle = '#065F46';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -1770,20 +1788,22 @@ class MathGameApp {
 
       // 3. 若开启了“透视 & 头顶标数法”，在每根非空柱子正上方悬浮显示柱高数字
       if (this.xrayActive) {
+        const colBadgeR = Math.max(16, Math.round(scale * 0.25));
+        const colFontSize = Math.max(16, Math.round(scale * 0.27));
         for (let gx = 0; gx < 3; gx++) {
           for (let gy = 0; gy < 3; gy++) {
             const h = grid[gx][gy];
             if (h > 0) {
-              const topCenter = projectPoint(gx - 1.0, gy - 1.0, h + 0.22);
+              const topCenter = projectPoint(gx - 1.0, gy - 1.0, h + 0.24);
               ctx.beginPath();
-              ctx.arc(topCenter.x, topCenter.y, 15, 0, Math.PI * 2);
+              ctx.arc(topCenter.x, topCenter.y, colBadgeR, 0, Math.PI * 2);
               ctx.fillStyle = '#1D4ED8';
               ctx.fill();
               ctx.strokeStyle = '#FFFFFF';
-              ctx.lineWidth = 2.5;
+              ctx.lineWidth = 2.8;
               ctx.stroke();
 
-              ctx.font = '900 16px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+              ctx.font = `900 ${colFontSize}px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
               ctx.fillStyle = '#FFFFFF';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
@@ -1919,8 +1939,15 @@ class MathGameApp {
       window.addEventListener('touchend', onPointerUp);
     }
 
+    const onWindowResize = () => {
+      updateCanvasSize();
+      renderScene();
+    };
+    window.addEventListener('resize', onWindowResize);
+
     this.blocksCleanup = () => {
       stopSpinAnim();
+      window.removeEventListener('resize', onWindowResize);
       window.removeEventListener('mousemove', onPointerMove);
       window.removeEventListener('mouseup', onPointerUp);
       window.removeEventListener('touchmove', onPointerMove);
@@ -2016,6 +2043,9 @@ class MathGameApp {
     controlsRow.appendChild(xrayBtn);
     blockContainer.appendChild(controlsRow);
     this.questionZoneEl.appendChild(blockContainer);
+
+    // 挂载后动态测量容器尺寸，让展示框与 3D 积木自适应铺满中心区域
+    updateCanvasSize();
 
     // 入场自动做一个优雅的 3D 旋转进场动画，直观提示它是可旋转 3D 模型
     yaw = defaultYaw - 0.65;
