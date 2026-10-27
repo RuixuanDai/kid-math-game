@@ -120,6 +120,9 @@
 
     <!-- 60秒冲刺悬浮 HUD 状态条 -->
     <div class="speedrun-hud" id="speedrun-hud">
+      <div class="speedrun-progress-track">
+        <div class="speedrun-progress-fill" id="speedrun-progress-fill"></div>
+      </div>
       <div class="speedrun-hud-item">
         <span>⏱️ 剩余时间:</span>
         <span class="hud-val speedrun-timer-badge" id="speedrun-timer">60</span>s
@@ -131,6 +134,10 @@
       <div class="speedrun-hud-item">
         <span>🔥 连对爆发:</span>
         <span class="hud-val" id="speedrun-combo">0</span>
+      </div>
+      <div class="speedrun-hud-item">
+        <span>🏅 最高纪录:</span>
+        <span class="hud-val" id="speedrun-best">0</span>
       </div>
     </div>
 
@@ -223,10 +230,16 @@
 
       <!-- Tab 2: 创意游乐场 (可拖拽自由拼贴) -->
       <div class="sticker-tab-panel" id="tab-playground">
+        <div class="playground-toolbar">
+          <span class="sub-explain">👇 点击下方贴纸放入乐园，在画布中自由拖动，点击它会说话跳跃！</span>
+          <div class="playground-actions">
+            <button id="bg-switch-btn" class="candy-btn btn-info btn-sm" title="切换游乐场主题背景">🌅 切换场景</button>
+            <button id="clear-playground-btn" class="candy-btn btn-secondary btn-sm" title="清空画布上的贴纸">🧹 清空</button>
+          </div>
+        </div>
         <div class="sticker-playground-canvas" id="sticker-playground-canvas" title="点击或拖拽萌宠自由摆放">
           <!-- 动态放入的贴纸 -->
         </div>
-        <div class="sub-explain">👇 点击下方贴纸放入乐园，还可以在草地上自由拖动哦！</div>
         <div class="playground-stickers-bar" id="playground-stickers-bar">
           <!-- 可选贴纸条 -->
         </div>
@@ -285,6 +298,7 @@
   </div>
 
   <!-- 脚本加载 -->
+  <script src="lib/web-natural-tts.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/confetti.js"></script>
   <script src="js/game.js"></script>

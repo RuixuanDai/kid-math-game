@@ -1,17 +1,23 @@
 // 6岁儿童数学小王国 - 高级全能进阶版
-// 8大关卡：数一数、比大小、加减法、规律小火车、十格阵凑十、奇妙时钟岛、空间数积木、60秒冲刺
+// 8大关卡：森林数数、天平比大小、趣味加减、规律火车、十格阵凑十、奇妙时钟、空间数积木、60秒冲刺
 // 3大难度：10以内基础、20以内进退位、100以内高阶挑战
 
 class MathGameApp {
   constructor() {
     this.currentMode = 'counting'; // 'counting' | 'comparison' | 'arithmetic' | 'patterns' | 'tenframes' | 'clocks' | 'blocks' | 'speedrun'
-    this.difficulty = '20'; // 升级默认到 20以内，提供更丰富更有挑战的体验！
+    this.difficulty = '20';
     this.stars = parseInt(localStorage.getItem('kid_math_stars') || '8', 10);
     this.unlockedStickers = JSON.parse(localStorage.getItem('kid_math_stickers') || '["bunny", "sun", "icecream"]');
+    this.bestSprintScore = parseInt(localStorage.getItem('kid_math_best_sprint') || '0', 10);
+    this.playgroundScene = JSON.parse(localStorage.getItem('kid_math_playground') || '[]');
+    this.playgroundBgIndex = parseInt(localStorage.getItem('kid_math_playground_bg') || '0', 10);
+
     this.streak = 0;
     this.currentQuestion = null;
     this.countedItems = new Set();
     this.eggCost = 3;
+    this.nextQuestionTimer = null;
+    this.lastClockMinute = null;
 
     // 60秒极速挑战模式状态
     this.speedrunActive = false;
@@ -28,19 +34,20 @@ class MathGameApp {
       { id: 'bunny', name: '蹦蹦兔', emoji: '🐰', title: '胡萝卜大王', soundText: '我是蹦蹦兔，最喜欢吃脆甜的胡萝卜啦！' },
       { id: 'sun', name: '微笑太阳', emoji: '☀️', title: '温暖守护', soundText: '今天也是元气满满的一天哦！' },
       { id: 'icecream', name: '草莓圣代', emoji: '🍨', title: '夏日甜心', soundText: '冰冰凉凉，甜甜蜜蜜！' },
-      { id: 'lion', name: '小狮子波波', emoji: '🦁', title: '森林之王', soundText: '吼~ 我是勇敢聪明的森林之王！' },
-      { id: 'panda', name: '胖达熊猫', emoji: '🐼', title: '竹林高手', soundText: '呼噜噜，竹子真香呀！' },
+      { id: 'lion', name: '小狮子波波', emoji: '🦁', title: '森林之王', soundText: '吼！我是勇敢聪明的森林之王！' },
+      { id: 'panda', name: '胖达熊猫', emoji: '🐼', title: '竹林高手', soundText: '呼噜噜，翠绿的竹子真香呀！' },
       { id: 'unicorn', name: '七彩独角兽', emoji: '🦄', title: '彩虹精灵', soundText: '滴答滴答，彩虹魔法降临！' },
       { id: 'dino', name: '霸王龙豆豆', emoji: '🦖', title: '远古探险家', soundText: '嗷呜！我虽然个头大，但很爱交朋友！' },
-      { id: 'rocket', name: '星空火箭', emoji: '🚀', title: '小小宇航员', soundText: '3、2、1，发射去月球探险！' },
+      { id: 'rocket', name: '星空火箭', emoji: '🚀', title: '小小宇航员', soundText: '3、2、1，点火发射去月球探险！' },
       { id: 'crown', name: '闪亮王冠', emoji: '👑', title: '智慧国王', soundText: '戴上智慧王冠，你就是算术小达人！' },
-      { id: 'cat', name: '猫咪乐乐', emoji: '🐱', title: '捕鱼能手', soundText: '喵呜~ 今天抓到了好多数学小鱼！' },
+      { id: 'cat', name: '猫咪乐乐', emoji: '🐱', title: '捕鱼能手', soundText: '喵呜！今天抓到了好多数学小鱼！' },
       { id: 'chick', name: '欢欢小鸡', emoji: '🐥', title: '早起鸣唱', soundText: '叽叽喳喳，早起学习真快乐！' },
-      { id: 'star_wand', name: '魔法星杖', emoji: '🪄', title: '奇迹魔法', soundText: '巴拉拉能量，数学难题变简单！' }
+      { id: 'star_wand', name: '魔法星杖', emoji: '🪄', title: '奇迹魔法', soundText: '奇妙能量，数学难题变简单！' }
     ];
 
     this.fruitEmojis = ['🍎', '🍓', '🍌', '🥕', '🍊', '🍇', '🍒', '🍉'];
     this.animalEmojis = ['🐥', '🐱', '🐶', '🐰', '🐸', '🐼', '🐧', '🐻'];
+    this.playgroundThemes = ['theme-meadow', 'theme-space', 'theme-ocean'];
 
     this.initDOMElements();
     this.bindEvents();
@@ -63,8 +70,21 @@ class MathGameApp {
     this.speedrunTimerEl = document.getElementById('speedrun-timer');
     this.speedrunScoreEl = document.getElementById('speedrun-score');
     this.speedrunComboEl = document.getElementById('speedrun-combo');
+    this.speedrunBestEl = document.getElementById('speedrun-best');
+    this.speedrunProgressEl = document.getElementById('speedrun-progress-fill');
     this.speedrunSummaryModal = document.getElementById('speedrun-summary-modal');
     this.difficultySelectorEl = document.getElementById('difficulty-selector');
+  }
+
+  clearPendingTimers() {
+    if (this.nextQuestionTimer) {
+      clearTimeout(this.nextQuestionTimer);
+      this.nextQuestionTimer = null;
+    }
+    if (typeof this.blocksCleanup === 'function') {
+      this.blocksCleanup();
+      this.blocksCleanup = null;
+    }
   }
 
   bindEvents() {
@@ -75,7 +95,7 @@ class MathGameApp {
       document.removeEventListener('touchstart', unlockAudio);
     };
     document.addEventListener('click', unlockAudio);
-    document.addEventListener('touchstart', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio, { passive: true });
 
     // 8大关卡模式切换
     document.querySelectorAll('.mode-nav-btn').forEach(btn => {
@@ -86,7 +106,7 @@ class MathGameApp {
       });
     });
 
-    // 难度切换 (事件代理到容器，无缝支持动态关卡标签)
+    // 难度切换
     if (this.difficultySelectorEl) {
       this.difficultySelectorEl.addEventListener('click', (e) => {
         const btn = e.target.closest('.diff-btn');
@@ -95,7 +115,7 @@ class MathGameApp {
         btn.classList.add('active');
         this.difficulty = btn.dataset.diff;
         window.soundManager.playPop();
-        this.setMascot("难度调整为：" + btn.textContent + "！继续冲冲冲！");
+        this.setMascot(`难度切换为：${btn.textContent}！继续加油！`);
         this.generateQuestion();
       });
     }
@@ -108,6 +128,24 @@ class MathGameApp {
         if (this.currentQuestion && this.currentQuestion.audioPrompt) {
           window.soundManager.speak(this.currentQuestion.audioPrompt);
         }
+      });
+    }
+
+    // 吉祥物点击互动
+    const mascotAvatar = document.querySelector('.mascot-avatar');
+    if (mascotAvatar) {
+      mascotAvatar.style.cursor = 'pointer';
+      mascotAvatar.addEventListener('click', () => {
+        window.soundManager.playPop();
+        const tips = [
+          '点喇叭按钮可以再听一遍题目哦！',
+          '每集齐 3 颗小金星，就能去扭蛋机抽一次萌宠！',
+          '遇到难题别着急，用凑十法和透视镜试试看！',
+          '在贴纸册的创意乐园里，可以自由拖动你的宠物伙伴！'
+        ];
+        const msg = tips[Math.floor(Math.random() * tips.length)];
+        this.setMascot(msg);
+        window.soundManager.speak(msg);
       });
     }
 
@@ -138,12 +176,21 @@ class MathGameApp {
       });
     }
 
-    // 弹窗关闭
+    // 弹窗关闭按钮与遮罩背景点击关闭
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         window.soundManager.playPop();
         const modal = btn.closest('.modal-overlay');
         if (modal) modal.classList.remove('active');
+      });
+    });
+
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          window.soundManager.playPop();
+          overlay.classList.remove('active');
+        }
       });
     });
 
@@ -162,6 +209,28 @@ class MathGameApp {
         window.soundManager.playPop();
       });
     });
+
+    // 创意乐园工具栏按钮 (清空 & 切换背景)
+    const clearPgBtn = document.getElementById('clear-playground-btn');
+    if (clearPgBtn) {
+      clearPgBtn.addEventListener('click', () => {
+        window.soundManager.playPop();
+        this.playgroundScene = [];
+        this.savePlaygroundScene();
+        const pg = document.getElementById('sticker-playground-canvas');
+        if (pg) pg.innerHTML = '';
+      });
+    }
+
+    const bgSwitchBtn = document.getElementById('bg-switch-btn');
+    if (bgSwitchBtn) {
+      bgSwitchBtn.addEventListener('click', () => {
+        window.soundManager.playMagic();
+        this.playgroundBgIndex = (this.playgroundBgIndex + 1) % this.playgroundThemes.length;
+        localStorage.setItem('kid_math_playground_bg', this.playgroundBgIndex.toString());
+        this.applyPlaygroundTheme();
+      });
+    }
 
     // 冲刺重新开始
     const restartSprintBtn = document.getElementById('restart-sprint-btn');
@@ -188,6 +257,9 @@ class MathGameApp {
         window.soundManager.voiceEnabled = !window.soundManager.voiceEnabled;
         voiceToggle.textContent = window.soundManager.voiceEnabled ? '🗣️ 读题开' : '🤐 读题关';
         voiceToggle.classList.toggle('off', !window.soundManager.voiceEnabled);
+        if (!window.soundManager.voiceEnabled && window.soundManager.tts) {
+          window.soundManager.tts.stop();
+        }
       });
     }
 
@@ -203,10 +275,32 @@ class MathGameApp {
         }
       });
     }
+
+    // 键盘快捷键支持 (数字键 1-4 选答案, Space/R 重读题目, Escape 关闭弹窗)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+        return;
+      }
+      const anyModalOpen = document.querySelector('.modal-overlay.active');
+      if (anyModalOpen) return;
+
+      if (['1', '2', '3', '4'].includes(e.key)) {
+        const idx = parseInt(e.key, 10) - 1;
+        const optBtns = this.optionsZoneEl.querySelectorAll('.option-card:not(:disabled):not(.disabled-opt)');
+        if (optBtns[idx]) {
+          optBtns[idx].click();
+        }
+      } else if (e.key === 'r' || e.key === 'R') {
+        if (this.currentQuestion && this.currentQuestion.audioPrompt) {
+          window.soundManager.speak(this.currentQuestion.audioPrompt);
+        }
+      }
+    });
   }
 
   switchMode(mode) {
-    // 如果之前在冲刺模式，清理计时器
+    this.clearPendingTimers();
     if (this.speedrunTimer) {
       clearInterval(this.speedrunTimer);
       this.speedrunTimer = null;
@@ -248,38 +342,38 @@ class MathGameApp {
     const diffMap = {
       counting: [
         { diff: '10', label: '10以内点数', tip: '基础单体逐个点数' },
-        { diff: '20', label: '20以内点数', tip: '进阶点数挑战' },
-        { diff: '100', label: '群组数数(分组)', tip: '2/5个一组，分组群计数' }
+        { diff: '20', label: '20以内点数', tip: '十格对齐进阶点数挑战' },
+        { diff: '100', label: '群组数数(分组)', tip: '2/5/10个一组，乘法启蒙群计数' }
       ],
       comparison: [
-        { diff: '10', label: '单数比大小', tip: '10以内数字大小比较' },
-        { diff: '20', label: '算式比大小', tip: '加减算式与数字对比' },
-        { diff: '100', label: '百数比大小', tip: '两位数与易混倒置数' }
+        { diff: '10', label: '单数比大小', tip: '10以内数字与点阵比较' },
+        { diff: '20', label: '算式比大小', tip: '加减算式与双算式对比' },
+        { diff: '100', label: '百数比大小', tip: '两位数与易混倒置数对比' }
       ],
       arithmetic: [
-        { diff: '10', label: '10以内加减', tip: '基础不进位加减法' },
+        { diff: '10', label: '10以内加减', tip: '基础加减法与视觉实物辅助' },
         { diff: '20', label: '20以内进退位', tip: '凑十破十与未知数填空' },
-        { diff: '100', label: '100以内挑战', tip: '整十数与连加连减大挑战' }
+        { diff: '100', label: '100以内挑战', tip: '整十数、两位数与连加连减' }
       ],
       patterns: [
-        { diff: '10', label: '图案规律', tip: '水果图形AB/ABB循环' },
-        { diff: '20', label: '跳跃数数', tip: '双数跳数与倒数规律' },
-        { diff: '100', label: '百数规律', tip: '加3、加4、加10进阶规律' }
+        { diff: '10', label: '图案规律', tip: 'AB / AAB / ABB / ABC 循环规律' },
+        { diff: '20', label: '跳跃数数', tip: '2个一数、5个一数与倒数规律' },
+        { diff: '100', label: '百数规律', tip: '等差阶梯与递增差值挑战' }
       ],
       tenframes: [
-        { diff: '10', label: '单盒凑十', tip: '10格阵红点补足10' },
-        { diff: '20', label: '双盒进位', tip: '双盒凑十进位加法' },
-        { diff: '100', label: '破十挑战', tip: '拆十法与高阶运算' }
+        { diff: '10', label: '单盒凑十', tip: '点击空位动手补齐10格阵' },
+        { diff: '20', label: '双盒进位', tip: '双盒凑十进位加法动画演示' },
+        { diff: '100', label: '破十挑战', tip: '20以内退位减法破十直观拆解' }
       ],
       clocks: [
-        { diff: '10', label: '认识整点', tip: '基础入门：分针指向12，整点认读 (如 3:00)' },
-        { diff: '20', label: '整点与半点', tip: '核心进阶：整点与半点随机切换与易错对比' },
-        { diff: '100', label: '几时几分', tip: '高阶挑战：一刻(15分)、三刻(45分)与各刻度' }
+        { diff: '10', label: '认识整点', tip: '分针指向12，整点认读 (如 3:00)' },
+        { diff: '20', label: '整点与半点', tip: '整点与半点(30分)对比认读' },
+        { diff: '100', label: '几时几分', tip: '一刻(15分)、三刻(45分)与5分刻度' }
       ],
       blocks: [
         { diff: '10', label: '初级 (4~6块)', tip: '2层基础立体积木堆' },
-        { diff: '20', label: '进阶 (7~9块)', tip: '含隐藏积木，空间推理' },
-        { diff: '100', label: '挑战 (10~14块)', tip: '3层多层立体透视挑战' }
+        { diff: '20', label: '进阶 (7~9块)', tip: '含隐藏遮挡积木，空间推理' },
+        { diff: '100', label: '挑战 (10~14块)', tip: '3层立体建筑与柱体标数法' }
       ]
     };
     return diffMap[mode] || null;
@@ -314,6 +408,7 @@ class MathGameApp {
   updateStatsUI() {
     if (this.starCountEl) this.starCountEl.textContent = this.stars;
     if (this.streakCountEl) this.streakCountEl.textContent = this.streak;
+    if (this.speedrunBestEl) this.speedrunBestEl.textContent = this.bestSprintScore;
 
     const gashaponBadge = document.getElementById('egg-available-badge');
     if (gashaponBadge) {
@@ -332,8 +427,13 @@ class MathGameApp {
     localStorage.setItem('kid_math_stickers', JSON.stringify(this.unlockedStickers));
   }
 
+  savePlaygroundScene() {
+    localStorage.setItem('kid_math_playground', JSON.stringify(this.playgroundScene));
+  }
+
   // ================= 核心出题调度 =================
   generateQuestion() {
+    this.clearPendingTimers();
     this.countedItems.clear();
     this.questionZoneEl.innerHTML = '';
     this.optionsZoneEl.innerHTML = '';
@@ -370,25 +470,29 @@ class MathGameApp {
 
     if (!this.speedrunActive && this.currentQuestion && this.currentQuestion.audioPrompt) {
       setTimeout(() => {
-        window.soundManager.speak(this.currentQuestion.audioPrompt);
-      }, 300);
+        if (!this.speedrunActive && this.currentQuestion) {
+          window.soundManager.speak(this.currentQuestion.audioPrompt);
+        }
+      }, 260);
     }
   }
 
-  // ================= 1. 森林数一数 (支持群组与进阶点数) =================
+  // ================= 1. 森林数一数 (严格区分 10以内 / 20以内 / 群组数数) =================
   generateCountingQuestion() {
-    const isGroupCount = (this.difficulty === '20' && Math.random() > 0.4) || (this.difficulty === '100');
     const itemPool = Math.random() > 0.5 ? this.fruitEmojis : this.animalEmojis;
     const emoji = itemPool[Math.floor(Math.random() * itemPool.length)];
 
-    if (isGroupCount) {
-      // 进阶：2个一组或5个一组数数！(幼小衔接乘法与群计数启蒙)
-      const groupSize = (this.difficulty === '100') ? 5 : 2;
-      const numGroups = (groupSize === 5) ? Math.floor(Math.random() * 3) + 3 : Math.floor(Math.random() * 4) + 3;
+    if (this.difficulty === '100') {
+      // 群组数数：2个一组、5个一组 或 10个一组 (乘法启蒙与群计数)
+      const groupSizes = [2, 5, 10];
+      const groupSize = groupSizes[Math.floor(Math.random() * groupSizes.length)];
+      const numGroups = groupSize === 10
+        ? Math.floor(Math.random() * 4) + 2 // 20~50
+        : (groupSize === 5 ? Math.floor(Math.random() * 4) + 3 : Math.floor(Math.random() * 5) + 3);
       const total = groupSize * numGroups;
 
-      const title = `${groupSize}个一组数一数：这里一共有多少个 ${emoji}？`;
-      const audioPrompt = `${groupSize}个一堆，快数数看一共有几组，合起来是多少个呢？`;
+      const title = `${groupSize}个一组数一数：一共有多少个 ${emoji}？`;
+      const audioPrompt = `每盒有 ${groupSize} 个，一共有 ${numGroups} 盒，快数数看合起来是多少个呢？`;
 
       this.currentQuestion = {
         answer: total,
@@ -396,7 +500,7 @@ class MathGameApp {
         type: 'counting'
       };
 
-      this.questionTextEl.innerHTML = `<span>${title}</span> <span class="tip-sub">（一堆有 ${groupSize} 个，可以 ${groupSize}个${groupSize}个数哦）</span>`;
+      this.questionTextEl.innerHTML = `<span>${title}</span> <span class="tip-sub">（点击每组可按 ${groupSize} 个一数累加）</span>`;
 
       const board = document.createElement('div');
       board.className = 'counting-board grouped-counting-board';
@@ -404,12 +508,22 @@ class MathGameApp {
       for (let g = 1; g <= numGroups; g++) {
         const groupBox = document.createElement('div');
         groupBox.className = 'counting-group-box';
-        groupBox.innerHTML = `<span class="group-tag">第${g}组</span><div class="group-items">${emoji.repeat(groupSize)}</div>`;
+        groupBox.innerHTML = `
+          <span class="group-tag">第 ${g} 组 (${groupSize}个)</span>
+          <div class="group-items">${emoji.repeat(groupSize)}</div>
+        `;
         groupBox.addEventListener('click', () => {
           if (!groupBox.classList.contains('counted')) {
             groupBox.classList.add('counted');
             window.soundManager.playPop();
-            const currentSubtotal = g * groupSize;
+            const countedCount = board.querySelectorAll('.counting-group-box.counted').length;
+            const currentSubtotal = countedCount * groupSize;
+
+            const badge = document.createElement('span');
+            badge.className = 'count-bubble';
+            badge.textContent = currentSubtotal;
+            groupBox.appendChild(badge);
+
             window.soundManager.speak(currentSubtotal.toString());
           }
         });
@@ -417,17 +531,25 @@ class MathGameApp {
       }
 
       this.questionZoneEl.appendChild(board);
-      const options = this.generateChoices(total, total - 6, total + 8, 4);
-      this.renderOptions(options, total);
+      const step = groupSize;
+      const choices = new Set([total]);
+      [total - step, total + step, total + step * 2, total - step * 2].forEach(c => {
+        if (c > 0 && choices.size < 4) choices.add(c);
+      });
+      while (choices.size < 4) {
+        choices.add(total + (Math.floor(Math.random() * 5) - 2) * step || (total + step));
+      }
+      this.renderOptions(Array.from(choices).sort(() => 0.5 - Math.random()), total);
 
     } else {
-      // 经典单体散落点数
-      const max = this.difficulty === '10' ? 10 : 20;
-      const min = this.difficulty === '10' ? 4 : 11;
+      // 10以内点数 (4~10) 或 20以内点数 (11~20，采用10列对齐布局，直观看出“10和几”)
+      const isTwenty = (this.difficulty === '20');
+      const min = isTwenty ? 11 : 4;
+      const max = isTwenty ? 20 : 10;
       const targetCount = Math.floor(Math.random() * (max - min + 1)) + min;
 
       const title = `数一数：草地上有几个 ${emoji} 呢？`;
-      const audioPrompt = `数一数草地上有几个，点一点它们可以帮你记录数字哦！`;
+      const audioPrompt = `数一数草地上有几个，点一点它们可以帮你标出数字哦！`;
 
       this.currentQuestion = {
         answer: targetCount,
@@ -435,10 +557,11 @@ class MathGameApp {
         type: 'counting'
       };
 
-      this.questionTextEl.innerHTML = `<span>${title}</span> <span class="tip-sub">（点一点可以按顺序标出数字）</span>`;
+      const subTip = isTwenty ? '（满一行是 10 个，看看是 10 加几呢？）' : '（点一点可以按顺序标出数字）';
+      this.questionTextEl.innerHTML = `<span>${title}</span> <span class="tip-sub">${subTip}</span>`;
 
       const board = document.createElement('div');
-      board.className = 'counting-board';
+      board.className = isTwenty ? 'counting-board counting-grid-10' : 'counting-board';
 
       for (let i = 1; i <= targetCount; i++) {
         const item = document.createElement('div');
@@ -470,12 +593,11 @@ class MathGameApp {
     }
   }
 
-  // ================= 2. 天平比大小 (升级算式对比 & 两位数倒置对比) =================
+  // ================= 2. 天平比大小 (单数點阵对比 / 加减算式对比 / 倒置两位数对比) =================
   generateComparisonQuestion() {
     let leftExpr, rightExpr, leftVal, rightVal;
 
     if (this.difficulty === '10') {
-      // 10以内单数对比
       leftVal = Math.floor(Math.random() * 10) + 1;
       rightVal = Math.floor(Math.random() * 10) + 1;
       if (Math.random() < 0.25) rightVal = leftVal;
@@ -483,41 +605,60 @@ class MathGameApp {
       rightExpr = rightVal.toString();
 
     } else if (this.difficulty === '20') {
-      // 20以内算式对比：如 8 + 6 对比 15，或 16 - 7 对比 8
-      const isLeftExpr = Math.random() > 0.5;
-      const a = Math.floor(Math.random() * 9) + 3;
-      const b = Math.floor(Math.random() * 8) + 2;
-      const exprVal = a + b;
-
-      if (isLeftExpr) {
+      // 20以内算式对比：包含加法、减法、以及双边算式对比
+      const modeType = Math.floor(Math.random() * 3);
+      if (modeType === 0) {
+        // 加法 vs 数字
+        const a = Math.floor(Math.random() * 8) + 3;
+        const b = Math.floor(Math.random() * 7) + 2;
+        leftVal = a + b;
         leftExpr = `${a} + ${b}`;
-        leftVal = exprVal;
-        rightVal = Math.random() < 0.3 ? exprVal : exprVal + (Math.random() > 0.5 ? 1 : -1);
+        rightVal = Math.random() < 0.25 ? leftVal : leftVal + (Math.random() > 0.5 ? 1 : -1);
+        rightExpr = rightVal.toString();
+      } else if (modeType === 1) {
+        // 减法 vs 数字
+        const total = Math.floor(Math.random() * 8) + 11;
+        const sub = Math.floor(Math.random() * 6) + 3;
+        leftVal = total - sub;
+        leftExpr = `${total} - ${sub}`;
+        rightVal = Math.random() < 0.25 ? leftVal : Math.max(1, leftVal + (Math.random() > 0.5 ? 2 : -2));
         rightExpr = rightVal.toString();
       } else {
-        rightExpr = `${a} + ${b}`;
-        rightVal = exprVal;
-        leftVal = Math.random() < 0.3 ? exprVal : exprVal + (Math.random() > 0.5 ? 1 : -1);
-        leftExpr = leftVal.toString();
+        // 双算式 PK (如 7 + 5 vs 6 + 6)
+        const a1 = Math.floor(Math.random() * 7) + 3;
+        const b1 = Math.floor(Math.random() * 6) + 2;
+        leftVal = a1 + b1;
+        leftExpr = `${a1} + ${b1}`;
+        const delta = Math.random() < 0.3 ? 0 : (Math.random() > 0.5 ? 1 : -1);
+        rightVal = Math.max(4, leftVal + delta);
+        const a2 = Math.floor(rightVal / 2);
+        const b2 = rightVal - a2;
+        rightExpr = `${a2} + ${b2}`;
+      }
+
+      // 随机交换左右盘
+      if (Math.random() > 0.5) {
+        [leftExpr, rightExpr] = [rightExpr, leftExpr];
+        [leftVal, rightVal] = [rightVal, leftVal];
       }
 
     } else {
-      // 100以内挑战：易混淆两位数 (如 47 vs 74) 或 算式对比 (如 35 + 20 vs 54)
+      // 100以内挑战：易混淆倒置两位数 (如 47 vs 74) 或 整十加减对比
       if (Math.random() > 0.4) {
-        // 易混倒置两位数
-        const d1 = Math.floor(Math.random() * 7) + 2;
-        const d2 = Math.floor(Math.random() * 7) + 2;
+        const d1 = Math.floor(Math.random() * 8) + 1;
+        let d2 = Math.floor(Math.random() * 8) + 1;
+        if (d1 === d2 && Math.random() > 0.3) d2 = (d2 % 8) + 1;
         leftVal = d1 * 10 + d2;
         rightVal = d2 * 10 + d1;
         leftExpr = leftVal.toString();
         rightExpr = rightVal.toString();
       } else {
-        const tens1 = (Math.floor(Math.random() * 5) + 1) * 10;
-        const ones1 = Math.floor(Math.random() * 9) + 1;
+        const tens1 = (Math.floor(Math.random() * 5) + 2) * 10;
+        const ones1 = Math.floor(Math.random() * 8) + 1;
         const tens2 = (Math.floor(Math.random() * 3) + 1) * 10;
         leftExpr = `${tens1 + ones1} + ${tens2}`;
         leftVal = tens1 + ones1 + tens2;
-        rightVal = Math.random() < 0.3 ? leftVal : leftVal + (Math.random() > 0.5 ? 2 : -2);
+        rightVal = Math.random() < 0.28 ? leftVal : leftVal + (Math.random() > 0.5 ? 2 : -2);
         rightExpr = rightVal.toString();
       }
     }
@@ -527,21 +668,31 @@ class MathGameApp {
     if (leftVal < rightVal) answerSymbol = '<';
 
     const audioPrompt = `比一比，左边是 ${leftExpr}，右边是 ${rightExpr}，哪边更大呢？`;
-    this.questionTextEl.innerHTML = `天平比大小：比较左右两边谁更大！`;
+    this.questionTextEl.innerHTML = `天平比大小：<span>比较左右两边谁更大！</span> <span class="tip-sub">（点击托盘可听读数）</span>`;
 
     this.currentQuestion = {
       answer: answerSymbol,
+      leftVal,
+      rightVal,
       audioPrompt: audioPrompt,
       type: 'comparison'
     };
 
     const balanceBox = document.createElement('div');
     balanceBox.className = 'balance-container';
+    balanceBox.id = 'balance-container';
 
     // 左盘
     const leftPlate = document.createElement('div');
     leftPlate.className = 'scale-plate left-plate';
-    leftPlate.innerHTML = `<div class="plate-expr">${leftExpr}</div>`;
+    const leftDots = (this.difficulty === '10') ? `<div class="plate-dots">${'🟢'.repeat(leftVal)}</div>` : `<div class="plate-hint-val" style="display:none;">= ${leftVal}</div>`;
+    leftPlate.innerHTML = `<div class="plate-expr">${leftExpr}</div>${leftDots}`;
+    leftPlate.addEventListener('click', () => {
+      window.soundManager.playPop();
+      window.soundManager.speak(`左边是 ${leftExpr}`);
+      const hint = leftPlate.querySelector('.plate-hint-val');
+      if (hint && leftExpr.includes('+')) hint.style.display = 'block';
+    });
 
     // 中间鳄鱼嘴
     const midSymbol = document.createElement('div');
@@ -552,7 +703,14 @@ class MathGameApp {
     // 右盘
     const rightPlate = document.createElement('div');
     rightPlate.className = 'scale-plate right-plate';
-    rightPlate.innerHTML = `<div class="plate-expr">${rightExpr}</div>`;
+    const rightDots = (this.difficulty === '10') ? `<div class="plate-dots">${'🟠'.repeat(rightVal)}</div>` : `<div class="plate-hint-val" style="display:none;">= ${rightVal}</div>`;
+    rightPlate.innerHTML = `<div class="plate-expr">${rightExpr}</div>${rightDots}`;
+    rightPlate.addEventListener('click', () => {
+      window.soundManager.playPop();
+      window.soundManager.speak(`右边是 ${rightExpr}`);
+      const hint = rightPlate.querySelector('.plate-hint-val');
+      if (hint && rightExpr.includes('+')) hint.style.display = 'block';
+    });
 
     balanceBox.appendChild(leftPlate);
     balanceBox.appendChild(midSymbol);
@@ -578,85 +736,106 @@ class MathGameApp {
     });
   }
 
-  // ================= 3. 趣味加减法 (支持进退位、未知数填空 & 两位数运算) =================
+  // ================= 3. 趣味加减法 (精准进退位、未知数填空 & 凑十破十小妙招提示) =================
   generateArithmeticQuestion() {
-    let promptHtml, audioText, answer;
-    const isBlankMode = Math.random() > 0.6; // 40% 概率出未知数填空题 (如 8 + ? = 14)
+    let promptHtml, audioText, answer, strategyTip = '';
+    const isBlankMode = Math.random() > 0.65;
 
     if (this.difficulty === '10') {
       const isAdd = Math.random() > 0.4;
+      const emoji = this.fruitEmojis[Math.floor(Math.random() * this.fruitEmojis.length)];
       if (isAdd) {
-        const a = Math.floor(Math.random() * 8) + 1;
+        const a = Math.floor(Math.random() * 7) + 1; // 1~7
         const b = Math.floor(Math.random() * (10 - a)) + 1;
-        answer = a + b;
-        promptHtml = `${a} + ${b} = ?`;
-        audioText = `${a} 加 ${b} 等于几呢？`;
+        if (isBlankMode) {
+          answer = b;
+          promptHtml = `${a} + <span class="blank-box">?</span> = ${a + b}`;
+          audioText = `${a} 加上几等于 ${a + b} 呢？`;
+          strategyTip = `💡 想一想：已有 ${emoji.repeat(a)}，再添几个就是 ${a + b} 个？`;
+        } else {
+          answer = a + b;
+          promptHtml = `${a} + ${b} = ?`;
+          audioText = `${a} 加 ${b} 等于几呢？`;
+          strategyTip = `${emoji.repeat(a)} ➕ ${emoji.repeat(b)}`;
+        }
       } else {
-        const a = Math.floor(Math.random() * 8) + 3;
+        const a = Math.floor(Math.random() * 7) + 3; // 3~9
         const b = Math.floor(Math.random() * (a - 1)) + 1;
         answer = a - b;
         promptHtml = `${a} - ${b} = ?`;
         audioText = `${a} 减去 ${b} 等于几呢？`;
+        strategyTip = `共有 ${a} 个 ${emoji}，拿走 ${b} 个，数数还剩几个？`;
       }
 
     } else if (this.difficulty === '20') {
-      // 20以内：核心考察凑十法进位加法与破十法退位减法！
+      // 20以内核心：标准凑十法进位加法 (一位数+一位数>10) 与 破十法退位减法 (十几-一位数)
       const isAdd = Math.random() > 0.45;
       if (isAdd) {
-        // 进位加法 (如 7 + 8 = 15, 9 + 6 = 15)
         const a = Math.floor(Math.random() * 6) + 4; // 4~9
-        const b = Math.floor(Math.random() * 7) + (11 - a); // 确保 a + b > 10
+        const minB = 11 - a; // 确保 a + b >= 11
+        const b = Math.floor(Math.random() * (9 - minB + 1)) + minB; // minB ~ 9
+        const need10 = 10 - a;
+        const leftOver = b - need10;
+
         if (isBlankMode) {
           promptHtml = `${a} + <span class="blank-box">?</span> = ${a + b}`;
           audioText = `${a} 加上几等于 ${a + b} 呢？`;
           answer = b;
+          strategyTip = `💡 凑十思路：${a} 加 ${need10} 先凑成 10，10 再加 ${leftOver} 等于 ${a + b}，所以填 ${need10} + ${leftOver} = ${b}！`;
         } else {
           promptHtml = `${a} + ${b} = ?`;
           audioText = `${a} 加 ${b} 等于几呢？可以用凑十法算一算哦！`;
           answer = a + b;
+          strategyTip = `💡 凑十妙招：把 ${b} 分成 ${need10} 和 ${leftOver}，先算 ${a} + ${need10} = 10，再算 10 + ${leftOver} = ?`;
         }
       } else {
-        // 退位减法 (如 14 - 8 = 6, 13 - 7 = 6)
-        const total = Math.floor(Math.random() * 8) + 11; // 11~18
-        const sub = Math.floor(Math.random() * 7) + (total - 9); // 确保个位不够减
+        // 标准退位减法：total 为 11~18，sub 为 (total-9)~9，确保个位不够减
+        const total = Math.floor(Math.random() * 7) + 11; // 11~17
+        const minSub = total - 9; // 2~8
+        const sub = Math.floor(Math.random() * (9 - minSub + 1)) + minSub; // minSub ~ 9
+        const ones = total - 10;
+        const afterBreak10 = 10 - sub;
+
         if (isBlankMode) {
           promptHtml = `${total} - <span class="blank-box">?</span> = ${total - sub}`;
           audioText = `${total} 减去几等于 ${total - sub} 呢？`;
           answer = sub;
+          strategyTip = `💡 逆向思考：${total} 拿走多少还剩 ${total - sub} 呢？`;
         } else {
           promptHtml = `${total} - ${sub} = ?`;
           audioText = `${total} 减去 ${sub} 等于几呢？可以用破十法算一算！`;
           answer = total - sub;
+          strategyTip = `💡 破十妙招：把 ${total} 分成 10 和 ${ones}，先算 10 - ${sub} = ${afterBreak10}，再算 ${afterBreak10} + ${ones} = ?`;
         }
       }
 
     } else {
-      // 100以内高阶运算：整十数加减与两位数加一位数 (如 35 + 4, 60 + 30, 48 - 6)
+      // 100以内高阶运算：整十数加减、两位数加减一位数、三数连加连减
       const qType = Math.floor(Math.random() * 3);
       if (qType === 0) {
-        // 整十数加减
         const t1 = (Math.floor(Math.random() * 5) + 1) * 10;
         const t2 = (Math.floor(Math.random() * 4) + 1) * 10;
         if (Math.random() > 0.5) {
           promptHtml = `${t1} + ${t2} = ?`;
           audioText = `${t1} 加 ${t2} 等于几呢？`;
           answer = t1 + t2;
+          strategyTip = `💡 整十妙招：${t1 / 10} 个十加 ${t2 / 10} 个十，一共是 ${(t1 + t2) / 10} 个十！`;
         } else {
           const big = t1 + t2;
           promptHtml = `${big} - ${t1} = ?`;
           audioText = `${big} 减去 ${t1} 等于几呢？`;
           answer = t2;
+          strategyTip = `💡 整十妙招：${big / 10} 个十减去 ${t1 / 10} 个十，还剩几个十？`;
         }
       } else if (qType === 1) {
-        // 两位数加一位数不进位 (如 32 + 5 = 37)
         const tens = (Math.floor(Math.random() * 7) + 2) * 10;
         const ones = Math.floor(Math.random() * 5) + 1;
         const addOne = Math.floor(Math.random() * (8 - ones)) + 1;
         promptHtml = `${tens + ones} + ${addOne} = ?`;
         audioText = `${tens + ones} 加 ${addOne} 等于几呢？`;
         answer = tens + ones + addOne;
+        strategyTip = `💡 数位对齐：十位还是 ${tens}，先把个位 ${ones} + ${addOne} 算出来！`;
       } else {
-        // 3数连加连减大挑战！(如 4 + 3 + 2, 10 - 3 - 2)
         const a = Math.floor(Math.random() * 6) + 2;
         const b = Math.floor(Math.random() * 5) + 2;
         const c = Math.floor(Math.random() * 4) + 1;
@@ -664,16 +843,18 @@ class MathGameApp {
           promptHtml = `${a} + ${b} + ${c} = ?`;
           audioText = `${a} 加 ${b} 再加 ${c}，一共等于几？`;
           answer = a + b + c;
+          strategyTip = `💡 分步心算：先算 ${a} + ${b} = ${a + b}，再加上 ${c}！`;
         } else {
           const total = a + b + c;
           promptHtml = `${total} - ${a} - ${b} = ?`;
           audioText = `${total} 减去 ${a} 再减去 ${b}，还剩几？`;
           answer = c;
+          strategyTip = `💡 分步心算：先算 ${total} - ${a} = ${total - a}，再减去 ${b}！`;
         }
       }
     }
 
-    this.questionTextEl.innerHTML = `魔法算术挑战：<span>${promptHtml}</span>`;
+    this.questionTextEl.innerHTML = `魔法算术挑战：<span>算一算正确的得数吧！</span>`;
     this.currentQuestion = {
       answer: answer,
       audioPrompt: audioText,
@@ -682,7 +863,19 @@ class MathGameApp {
 
     const visualBox = document.createElement('div');
     visualBox.className = 'arithmetic-card-display';
-    visualBox.innerHTML = `<div class="big-formula-text">${promptHtml}</div>`;
+    visualBox.innerHTML = `
+      <div class="big-formula-text">${promptHtml}</div>
+      ${strategyTip ? `<div class="arithmetic-strategy-pill" title="点击朗读算术小妙招">${strategyTip}</div>` : ''}
+    `;
+
+    const tipEl = visualBox.querySelector('.arithmetic-strategy-pill');
+    if (tipEl) {
+      tipEl.addEventListener('click', () => {
+        window.soundManager.playMagic();
+        window.soundManager.speak(strategyTip);
+      });
+    }
+
     this.questionZoneEl.appendChild(visualBox);
 
     const minChoice = Math.max(0, answer - 4);
@@ -690,56 +883,75 @@ class MathGameApp {
     this.renderOptions(options, answer);
   }
 
-  // ================= 4. 规律小火车 (支持数字跳数与阶梯规律) =================
+  // ================= 4. 规律小火车 (支持 AB/AAB/ABB/ABC 图案规律 & 阶梯跳数规律) =================
   generatePatternQuestion() {
     let sequence = [];
     let answer;
     let descText;
 
     if (this.difficulty === '10') {
-      // 符号图案规律
-      const pool = ['🌸', '⭐', '🎈', '🍎', '🍌', '🥕'];
-      const p1 = pool[Math.floor(Math.random() * pool.length)];
-      let p2 = pool[Math.floor(Math.random() * pool.length)];
-      while (p2 === p1) p2 = pool[Math.floor(Math.random() * pool.length)];
+      // 丰富图案规律：ABABAB / AABAAB / ABBABB / ABCABC
+      const pool = ['🌸', '⭐', '🎈', '🍎', '🍌', '🥕', '🍓', '🐳'];
+      const shuffled = [...pool].sort(() => 0.5 - Math.random());
+      const [p1, p2, p3] = shuffled;
+      const patType = Math.floor(Math.random() * 4);
 
-      sequence = [p1, p2, p1, p2, p1, '?'];
-      answer = p2;
-      descText = `看一看小火车规律，最后一节装什么？`;
+      if (patType === 0) {
+        sequence = [p1, p2, p1, p2, p1, '?'];
+        answer = p2;
+        descText = 'AB交替规律：看一看小火车，最后一节装什么？';
+      } else if (patType === 1) {
+        sequence = [p1, p1, p2, p1, p1, '?'];
+        answer = p2;
+        descText = 'AAB循环规律：每两个一样的配一个不同的，最后装什么？';
+      } else if (patType === 2) {
+        sequence = [p1, p2, p2, p1, p2, '?'];
+        answer = p2;
+        descText = 'ABB循环规律：仔细观察车厢排列，最后一节装什么？';
+      } else {
+        sequence = [p1, p2, p3, p1, p2, '?'];
+        answer = p3;
+        descText = 'ABC三色规律：3节车厢一组循环，接下来装什么？';
+      }
 
     } else if (this.difficulty === '20') {
-      // 跳跃点数规律 (双数跳数 / 5的倍数 / 倒数)
       const patternType = Math.floor(Math.random() * 3);
       if (patternType === 0) {
-        // 2个2个数 (双数跳数 2, 4, 6, 8, 10, ?)
         const start = (Math.floor(Math.random() * 4) + 1) * 2;
         sequence = [start, start + 2, start + 4, start + 6, '?'];
         answer = start + 8;
-        descText = `2个2个数规律：后面应该是几呢？`;
+        descText = '2个2个数规律（每次+2）：后面应该是几呢？';
       } else if (patternType === 1) {
-        // 5个5个数 (5, 10, 15, 20, ?)
         const start = Math.random() > 0.5 ? 5 : 0;
         sequence = [start, start + 5, start + 10, start + 15, '?'];
         answer = start + 20;
-        descText = `5个5个数规律：接下来装哪个数字？`;
+        descText = '5个5个数规律（每次+5）：接下来装哪个数字？';
       } else {
-        // 倒数规律 (20, 19, 18, 17, ?)
-        const start = Math.floor(Math.random() * 6) + 15;
-        sequence = [start, start - 1, start - 2, start - 3, '?'];
-        answer = start - 4;
-        descText = `倒数小火车：数字越来越小啦，下一个是几？`;
+        const step = Math.random() > 0.5 ? 1 : 2;
+        const start = Math.floor(Math.random() * 5) + 14;
+        sequence = [start, start - step, start - step * 2, start - step * 3, '?'];
+        answer = start - step * 4;
+        descText = `倒数小火车（每次减${step}）：下一个数字是几？`;
       }
 
     } else {
-      // 100以内阶梯递增递减 (如 10, 20, 30, 40, ? 或 3, 6, 9, 12, ?)
-      const step = [3, 4, 10][Math.floor(Math.random() * 3)];
-      const start = step === 10 ? 10 : Math.floor(Math.random() * 5) + 1;
-      sequence = [start, start + step, start + step * 2, start + step * 3, '?'];
-      answer = start + step * 4;
-      descText = `找规律：每次增加 ${step}，下一节车厢是几？`;
+      const isGrowingStep = Math.random() > 0.65;
+      if (isGrowingStep) {
+        // 递增差值规律：+1, +2, +3, +4 (如 2, 3, 5, 8, 12, ?)
+        const start = Math.floor(Math.random() * 4) + 1;
+        sequence = [start, start + 1, start + 3, start + 6, '?'];
+        answer = start + 10;
+        descText = '阶梯递增规律（依次+1, +2, +3, +4）：下一节是几？';
+      } else {
+        const step = [3, 4, 10][Math.floor(Math.random() * 3)];
+        const start = step === 10 ? (Math.floor(Math.random() * 4) + 1) * 10 : Math.floor(Math.random() * 6) + 2;
+        sequence = [start, start + step, start + step * 2, start + step * 3, '?'];
+        answer = start + step * 4;
+        descText = `等差找规律（每次增加 ${step}）：下一节车厢是几？`;
+      }
     }
 
-    this.questionTextEl.innerHTML = `找规律小火车：<span>${descText}</span> 🚂`;
+    this.questionTextEl.innerHTML = `找规律小火车：<span>${descText}</span>`;
     const audioPrompt = typeof answer === 'number'
       ? `看一看小火车的车厢数字规律，最后一节车厢装什么呢？`
       : `看一看小火车的车厢图案规律，最后一节车厢装什么呢？`;
@@ -787,7 +999,7 @@ class MathGameApp {
       options = this.generateChoices(answer, Math.max(0, answer - 6), answer + 8, 4);
     } else {
       options = [answer];
-      const pool = ['🌸', '⭐', '🎈', '🍎', '🍌', '🥕'];
+      const pool = ['🌸', '⭐', '🎈', '🍎', '🍌', '🥕', '🍓', '🐳'];
       while (options.length < 4) {
         const p = pool[Math.floor(Math.random() * pool.length)];
         if (!options.includes(p)) options.push(p);
@@ -798,15 +1010,15 @@ class MathGameApp {
     this.renderOptions(options, answer);
   }
 
-  // ================= 5. 十格阵凑十 (NEW! 新加坡数学/蒙氏凑十破十) =================
+  // ================= 5. 十格阵凑十 (单盒互动补十 / 双盒凑十动画 / 双盒破十减法) =================
   generateTenFrameQuestion() {
     if (this.difficulty === '10') {
-      // 单十格阵：已经有 N 个红点，还差几个能凑成 10？
+      // 单十格阵：已有 N 个红点，点击空白圆点可亲手补齐 10 个
       const filled = Math.floor(Math.random() * 7) + 2; // 2~8
       const needed = 10 - filled;
 
-      this.questionTextEl.innerHTML = `十格阵凑十：<span>已有 ${filled} 个圆点，还差几个能凑满 10？</span>`;
-      const audioPrompt = `看一看十格阵，盒子里已经有 ${filled} 个小圆点，还差几个就能凑满 10 个呢？`;
+      this.questionTextEl.innerHTML = `十格阵凑十：<span>已有 ${filled} 个 🔴，还差几个凑满 10？</span> <span class="tip-sub">（点一点空位试试）</span>`;
+      const audioPrompt = `看一看十格阵，盒子里已经有 ${filled} 个红圆点，还差几个就能凑满 10 个呢？`;
 
       this.currentQuestion = {
         answer: needed,
@@ -820,6 +1032,8 @@ class MathGameApp {
       const frame = document.createElement('div');
       frame.className = 'ten-frame';
 
+      let userFilledCount = 0;
+
       for (let i = 1; i <= 10; i++) {
         const cell = document.createElement('div');
         cell.className = 'ten-frame-cell';
@@ -827,11 +1041,26 @@ class MathGameApp {
           cell.innerHTML = `<span class="ten-dot filled-dot">🔴</span>`;
         } else {
           cell.innerHTML = `<span class="ten-dot empty-dot">⚪</span>`;
+          cell.dataset.empty = 'true';
         }
         cell.addEventListener('click', () => {
           window.soundManager.playPop();
           cell.classList.add('wobble');
           setTimeout(() => cell.classList.remove('wobble'), 350);
+
+          if (cell.dataset.empty === 'true') {
+            const dot = cell.querySelector('.ten-dot');
+            if (cell.classList.toggle('user-filled')) {
+              dot.textContent = '🟡';
+              dot.classList.remove('empty-dot');
+              userFilledCount++;
+              window.soundManager.speak(userFilledCount.toString());
+            } else {
+              dot.textContent = '⚪';
+              dot.classList.add('empty-dot');
+              userFilledCount = Math.max(0, userFilledCount - 1);
+            }
+          }
         });
         frame.appendChild(cell);
       }
@@ -842,16 +1071,17 @@ class MathGameApp {
       const options = this.generateChoices(needed, 1, 9, 4);
       this.renderOptions(options, needed);
 
-    } else {
-      // 双十格阵破十与进位法 (如 8 + 5 = 13)
+    } else if (this.difficulty === '20') {
+      // 双十格阵凑十进位加法 (如 8 + 5 = 13)，支持点击“演示凑十魔法”动态移位
       const num1 = Math.floor(Math.random() * 4) + 6; // 6, 7, 8, 9
-      const num2 = Math.floor(Math.random() * 5) + (11 - num1); // 进位加法
+      const minNum2 = 11 - num1;
+      const num2 = Math.floor(Math.random() * (9 - minNum2 + 1)) + minNum2; // 确保进位且 <= 9
       const needToMake10 = 10 - num1;
       const remain = num2 - needToMake10;
       const total = num1 + num2;
 
-      this.questionTextEl.innerHTML = `十格阵凑十法：<span>${num1} + ${num2} = ?</span>`;
-      const audioPrompt = `${num1} 加 ${num2}，把第二组拆出 ${needToMake10} 个凑满第一个10，合起来是多少？`;
+      this.questionTextEl.innerHTML = `十格阵凑十法：<span>${num1} + ${num2} = ?</span> <span class="tip-sub">（先凑满第一盒10个，再加剩下的）</span>`;
+      const audioPrompt = `${num1} 加 ${num2}，把第二盒分出 ${needToMake10} 个凑满第一盒的 10，合起来是多少？`;
 
       this.currentQuestion = {
         answer: total,
@@ -859,27 +1089,121 @@ class MathGameApp {
         type: 'tenframe'
       };
 
+      const outer = document.createElement('div');
+      outer.className = 'ten-frame-stage-col';
+
       const container = document.createElement('div');
       container.className = 'dual-ten-frame-wrapper';
 
-      // 渲染两个十格阵并标示凑十过程
+      const renderFrames = (isMerged) => {
+        if (!isMerged) {
+          container.innerHTML = `
+            <div class="ten-frame-box">
+              <div class="frame-label">第一盒 (已有 ${num1} 个 🔴，还空 ${needToMake10} 格)</div>
+              <div class="ten-frame">
+                ${Array.from({length: 10}, (_, i) => `<div class="ten-frame-cell"><span class="ten-dot ${i < num1 ? '' : 'empty-dot'}">${i < num1 ? '🔴' : '⚪'}</span></div>`).join('')}
+              </div>
+            </div>
+            <div class="frame-plus">➕</div>
+            <div class="ten-frame-box">
+              <div class="frame-label">第二盒 (共有 ${num2} 个 🟡)</div>
+              <div class="ten-frame">
+                ${Array.from({length: 10}, (_, i) => `<div class="ten-frame-cell"><span class="ten-dot ${i < num2 ? '' : 'empty-dot'}">${i < num2 ? '🟡' : '⚪'}</span></div>`).join('')}
+              </div>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div class="ten-frame-box">
+              <div class="frame-label">✨ 第一盒已凑满 10！(🔴×${num1} + 🟡×${needToMake10})</div>
+              <div class="ten-frame">
+                ${Array.from({length: 10}, (_, i) => `<div class="ten-frame-cell"><span class="ten-dot pop-in">${i < num1 ? '🔴' : '🟡'}</span></div>`).join('')}
+              </div>
+            </div>
+            <div class="frame-plus">➕</div>
+            <div class="ten-frame-box">
+              <div class="frame-label">✨ 第二盒还剩 ${remain} 个 🟡 (10 + ${remain} = ${total})</div>
+              <div class="ten-frame">
+                ${Array.from({length: 10}, (_, i) => `<div class="ten-frame-cell"><span class="ten-dot ${i < remain ? '' : 'empty-dot'}">${i < remain ? '🟡' : '⚪'}</span></div>`).join('')}
+              </div>
+            </div>
+          `;
+        }
+        container.querySelectorAll('.ten-frame-cell').forEach(cell => {
+          cell.addEventListener('click', () => {
+            window.soundManager.playPop();
+            cell.classList.add('wobble');
+            setTimeout(() => cell.classList.remove('wobble'), 350);
+          });
+        });
+      };
+
+      let mergedState = false;
+      renderFrames(false);
+
+      const magicBtn = document.createElement('button');
+      magicBtn.className = 'xray-toggle-btn';
+      magicBtn.innerHTML = `✨ 点击演示“凑十魔法”（移动 ${needToMake10} 个 🟡 填满第一盒）`;
+      magicBtn.addEventListener('click', () => {
+        mergedState = !mergedState;
+        window.soundManager.playMagic();
+        renderFrames(mergedState);
+        magicBtn.innerHTML = mergedState
+          ? `🔄 还原初始点阵 (${num1} + ${num2})`
+          : `✨ 点击演示“凑十魔法”（移动 ${needToMake10} 个 🟡 填满第一盒）`;
+      });
+
+      outer.appendChild(container);
+      outer.appendChild(magicBtn);
+      this.questionZoneEl.appendChild(outer);
+
+      const options = this.generateChoices(total, 11, 18, 4);
+      this.renderOptions(options, total);
+
+    } else {
+      // 100 难度：破十挑战（20以内退位减法的十格阵直观拆解，如 14 - 6 = 8）
+      const total = Math.floor(Math.random() * 7) + 11; // 11~17
+      const ones = total - 10;
+      const minSub = ones + 1; // 确保个位不够减，必须破十
+      const sub = Math.floor(Math.random() * (9 - minSub + 1)) + minSub; // minSub ~ 9
+      const remainInTen = 10 - sub;
+      const answer = total - sub;
+
+      this.questionTextEl.innerHTML = `十格阵破十法：<span>${total} - ${sub} = ?</span> <span class="tip-sub">（先从第一盒10里拿走${sub}个，再合起来）</span>`;
+      const audioPrompt = `破十法挑战：${total} 减 ${sub}，先从满十盒里拿走 ${sub} 个还剩 ${remainInTen} 个，再加上第二盒的 ${ones} 个等于几？`;
+
+      this.currentQuestion = {
+        answer: answer,
+        audioPrompt: audioPrompt,
+        type: 'tenframe'
+      };
+
+      const container = document.createElement('div');
+      container.className = 'dual-ten-frame-wrapper';
       container.innerHTML = `
         <div class="ten-frame-box">
-          <div class="frame-label">第一盒 (凑满 10): 🔴 × ${num1} + 🟡 × ${needToMake10}</div>
+          <div class="frame-label">第一盒 (10 拿走 ${sub} 个 ❌，还剩 ${remainInTen} 个 🟢)</div>
           <div class="ten-frame">
-            ${Array.from({length: 10}, (_, i) => `<div class="ten-frame-cell" data-idx="${i+1}"><span class="ten-dot">${i < num1 ? '🔴' : '🟡'}</span></div>`).join('')}
+            ${Array.from({length: 10}, (_, i) => `
+              <div class="ten-frame-cell ${i < sub ? 'taken-cell' : ''}">
+                <span class="ten-dot ${i < sub ? 'taken-dot' : ''}">${i < sub ? '🔴' : '🟢'}</span>
+              </div>
+            `).join('')}
           </div>
         </div>
         <div class="frame-plus">➕</div>
         <div class="ten-frame-box">
-          <div class="frame-label">第二盒 (还剩 ${remain}): 🟡 × ${remain}</div>
+          <div class="frame-label">第二盒 (零头还有 ${ones} 个 🟡，共 ${remainInTen} + ${ones})</div>
           <div class="ten-frame">
-            ${Array.from({length: 10}, (_, i) => `<div class="ten-frame-cell" data-idx="${i+1}"><span class="ten-dot">${i < remain ? '🟡' : '⚪'}</span></div>`).join('')}
+            ${Array.from({length: 10}, (_, i) => `
+              <div class="ten-frame-cell">
+                <span class="ten-dot ${i < ones ? '' : 'empty-dot'}">${i < ones ? '🟡' : '⚪'}</span>
+              </div>
+            `).join('')}
           </div>
         </div>
       `;
 
-      // 给双盒模式每一个点阵格子添加点击触感反馈
       container.querySelectorAll('.ten-frame-cell').forEach(cell => {
         cell.addEventListener('click', () => {
           window.soundManager.playPop();
@@ -889,22 +1213,19 @@ class MathGameApp {
       });
 
       this.questionZoneEl.appendChild(container);
-      const options = this.generateChoices(total, 11, 18, 4);
-      this.renderOptions(options, total);
+      const options = this.generateChoices(answer, 2, 9, 4);
+      this.renderOptions(options, answer);
     }
   }
 
-  // ================= 6. 奇妙时钟岛 (NEW! 认识时钟、整点与半点) =================
+  // ================= 6. 奇妙时钟岛 (认识整点、半点、一刻/三刻与外圈分针刻度辅助) =================
   generateClockQuestion() {
     let hour = Math.floor(Math.random() * 12) + 1; // 1~12
     let minute = 0;
 
     if (this.difficulty === '10') {
-      // 认识整点: 100% 整点 (如 3:00, 8:00)
       minute = 0;
     } else if (this.difficulty === '20') {
-      // 整点与半点: 随机切换整点与半点，强化对比（彻底告别固定30分）！
-      // 避免连续只出同一种，实现整点与半点交替出现
       if (this.lastClockMinute === 30) {
         minute = Math.random() > 0.35 ? 0 : 30;
       } else if (this.lastClockMinute === 0) {
@@ -914,8 +1235,7 @@ class MathGameApp {
       }
       this.lastClockMinute = minute;
     } else {
-      // 几时几分(高阶): 包含 15分(一刻)、30分(半点)、45分(三刻)、整点以及常见刻度
-      const minutesList = [0, 15, 30, 45, 10, 20, 50];
+      const minutesList = [0, 15, 30, 45, 5, 10, 20, 25, 40, 50];
       minute = minutesList[Math.floor(Math.random() * minutesList.length)];
     }
 
@@ -923,29 +1243,28 @@ class MathGameApp {
     const correctTimeStr = `${hour}:${minStr}`;
 
     const title = minute === 0 ? `看一看时钟：现在是几点整？` : `看一看时钟：现在是几点几分？`;
-    const audioPrompt = minute === 0 
-      ? `仔细看时针和分针，现在的指针指向几点整呢？`
-      : (minute === 30 
-          ? `仔细看时针和分针，现在的指针指向几点半呢？`
-          : `仔细看时针和分针，现在的指针指向几点几分呢？`);
+    const audioPrompt = minute === 0
+      ? `仔细看蓝色的短时针和红色的长分针，现在指向几点整呢？`
+      : (minute === 30
+          ? `分针指在6代表30分，现在是几点半呢？`
+          : `仔细看时针和分针，现在是几点几分呢？`);
 
     this.currentQuestion = {
       answer: correctTimeStr,
+      hour,
+      minute,
       audioPrompt: audioPrompt,
       type: 'clock'
     };
 
-    this.questionTextEl.innerHTML = `奇妙时钟岛：<span>${title}</span> ⏰`;
+    this.questionTextEl.innerHTML = `奇妙时钟岛：<span>${title}</span> <span class="tip-sub">（点击表盘可听读表提示）</span>`;
 
-    // 渲染 SVG 钟表
     const clockContainer = document.createElement('div');
     clockContainer.className = 'analog-clock-container';
 
-    // 计算分针和时针的角度
-    const minAngle = minute * 6; // 360 / 60
-    const hourAngle = (hour % 12 + minute / 60) * 30; // 360 / 12
+    const minAngle = minute * 6;
+    const hourAngle = (hour % 12 + minute / 60) * 30;
 
-    // 采用数学三角函数直接计算针尖与针尾的精确坐标（彻底杜绝 Safari/iPad 上 transform 旋转兼容性丢失）
     const rHour = 36;
     const hRad = (hourAngle - 90) * (Math.PI / 180);
     const hX1 = (100 - 8 * Math.cos(hRad)).toFixed(2);
@@ -963,18 +1282,30 @@ class MathGameApp {
     let numbersHtml = '';
     for (let h = 1; h <= 12; h++) {
       const angle = (h * 30 - 90) * (Math.PI / 180);
-      const r = 70;
+      const r = 68;
       const x = 100 + r * Math.cos(angle);
       const y = 100 + r * Math.sin(angle) + 6;
       numbersHtml += `<text x="${x}" y="${y}" class="clock-num" text-anchor="middle">${h}</text>`;
     }
 
-    // 表盘刻度点 (12个大刻度与分针小刻度，让钟表更真实生动)
+    // 在进阶/高阶模式下显示外圈分钟小数字提示 (00, 05, 10... 55)，帮助孩子理解为什么指着 6 是 30 分
+    let minuteRingHtml = '';
+    if (this.difficulty !== '10') {
+      for (let m = 0; m < 60; m += (this.difficulty === '20' ? 30 : 15)) {
+        const angle = (m * 6 - 90) * (Math.PI / 180);
+        const r = 82;
+        const x = 100 + r * Math.cos(angle);
+        const y = 100 + r * Math.sin(angle) + 3;
+        const lbl = m === 0 ? '00' : m.toString();
+        minuteRingHtml += `<text x="${x}" y="${y}" class="clock-min-num" text-anchor="middle">${lbl}</text>`;
+      }
+    }
+
     let ticksHtml = '';
     for (let m = 0; m < 60; m += 5) {
       const angle = (m * 6 - 90) * (Math.PI / 180);
       const isHourTick = (m % 15 === 0);
-      const r1 = isHourTick ? 84 : 86;
+      const r1 = isHourTick ? 85 : 87;
       const r2 = 90;
       const x1 = 100 + r1 * Math.cos(angle);
       const y1 = 100 + r1 * Math.sin(angle);
@@ -985,34 +1316,36 @@ class MathGameApp {
 
     clockContainer.innerHTML = `
       <svg class="analog-clock-svg" viewBox="0 0 200 200">
-        <!-- 钟表表盘外圈 -->
         <circle cx="100" cy="100" r="95" class="clock-face-outer" />
         <circle cx="100" cy="100" r="88" class="clock-face-inner" />
-        
-        <!-- 表盘刻度 -->
         ${ticksHtml}
-
-        <!-- 数字 1 ~ 12 -->
+        ${minuteRingHtml}
         ${numbersHtml}
-        
-        <!-- 时针 (短粗蓝色，直接使用绝对坐标) -->
         <line x1="${hX1}" y1="${hY1}" x2="${hX2}" y2="${hY2}" class="clock-hand hour-hand" />
-        
-        <!-- 分针 (长细红色，直接使用绝对坐标) -->
         <line x1="${mX1}" y1="${mY1}" x2="${mX2}" y2="${mY2}" class="clock-hand minute-hand" />
-        
-        <!-- 中心圆轴点 -->
         <circle cx="100" cy="100" r="7" class="clock-center-pin" />
       </svg>
       <div class="clock-legend">
-        <span class="legend-hour">🟦 短针是时针</span>
-        <span class="legend-minute">🟥 长针是分针</span>
+        <span class="legend-hour">🟦 短针看几时</span>
+        <span class="legend-minute">🟥 长针看几分 (1格5分)</span>
       </div>
     `;
 
+    const svgEl = clockContainer.querySelector('.analog-clock-svg');
+    if (svgEl) {
+      svgEl.style.cursor = 'pointer';
+      svgEl.addEventListener('click', () => {
+        window.soundManager.playTick();
+        const hintMsg = minute === 0
+          ? `长长的红分针指着12，代表整点，再看看蓝色的短时针指着数字几？`
+          : `红色的长分针指在数字 ${minute / 5 || 12} 上，代表 ${minute} 分！`;
+        this.setMascot(hintMsg);
+        window.soundManager.speak(hintMsg);
+      });
+    }
+
     this.questionZoneEl.appendChild(clockContainer);
 
-    // 生成针对性的高质量时钟选项（含幼小衔接易错陷阱）
     const choices = new Set([correctTimeStr]);
 
     if (minute === 0) {
@@ -1058,11 +1391,10 @@ class MathGameApp {
     this.renderOptions(options, correctTimeStr);
   }
 
-  // ================= 7. 空间数积木 (NEW! 3D等轴测积木空间推理) =================
+  // ================= 7. 空间数积木 (真 3D 可拖拽旋转模型 + 点亮计数 + 柱体标数透视法) =================
   generateBlocksQuestion() {
     this.xrayActive = false;
 
-    // 积木网格: 3x3 空间，每一格有高度 height
     let grid = [
       [0, 0, 0],
       [0, 0, 0],
@@ -1072,7 +1404,6 @@ class MathGameApp {
     let totalBlocks = 0;
 
     if (this.difficulty === '10') {
-      // 初级：4~6块积木，2层基础立体堆，直观容易数
       const targetCount = Math.floor(Math.random() * 3) + 4; // 4, 5, 6
       let placed = 0;
       const coords = [
@@ -1091,15 +1422,14 @@ class MathGameApp {
       totalBlocks = placed;
 
     } else if (this.difficulty === '20') {
-      // 进阶：7~9块积木，2~3层，保证有下层被压住的隐藏积木（空间思维训练！）
       const targetCount = Math.floor(Math.random() * 3) + 7; // 7, 8, 9
       let placed = 0;
-      // 保证中间或后排至少有2层
+      grid[0][0] = 2;
       grid[1][1] = 2;
-      placed += 2;
+      placed = 4;
 
       const coords = [
-        [0,0], [0,1], [0,2],
+        [0,1], [0,2],
         [1,0], [1,2],
         [2,0], [2,1], [2,2]
       ].sort(() => 0.5 - Math.random());
@@ -1117,16 +1447,16 @@ class MathGameApp {
       totalBlocks = placed;
 
     } else {
-      // 挑战：10~14块积木，3层立体建筑，考验多层空间透视推理
       const targetCount = Math.floor(Math.random() * 5) + 10; // 10~14
       let placed = 0;
-      grid[0][0] = 2;
-      grid[0][1] = 3;
-      grid[1][1] = 3;
-      placed = 8;
+      grid[0][0] = 3;
+      grid[0][1] = 2;
+      grid[1][0] = 2;
+      grid[1][1] = 2;
+      placed = 9;
 
       const coords = [
-        [0,2], [1,0], [1,2],
+        [0,2], [1,2],
         [2,0], [2,1], [2,2]
       ].sort(() => 0.5 - Math.random());
 
@@ -1142,8 +1472,8 @@ class MathGameApp {
       totalBlocks = placed;
     }
 
-    this.questionTextEl.innerHTML = `空间数积木：<span>数一数，一共有多少块积木？</span> 🧩`;
-    const audioPrompt = `数一数一共有多少块积木？别忘了被压在下面的隐藏积木哦！`;
+    this.questionTextEl.innerHTML = `空间数积木：<span>一共有多少块积木？</span> <span class="tip-sub">（👆 按住可 360° 拖动旋转，轻点积木可标数）</span>`;
+    const audioPrompt = `数一数一共有多少块积木？按住积木可以自由拖动旋转，转到背面看看有没有隐藏积木哦！`;
 
     this.currentQuestion = {
       answer: totalBlocks,
@@ -1151,124 +1481,502 @@ class MathGameApp {
       type: 'blocks'
     };
 
-    // 绘制大幅超清等轴测 3D 积木 (Isometric SVG)
     const blockContainer = document.createElement('div');
     blockContainer.className = 'isometric-blocks-container';
     blockContainer.id = 'blocks-stage';
 
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'isometric-svg');
+    const canvasWrap = document.createElement('div');
+    canvasWrap.className = 'blocks-3d-stage-wrap';
 
-    // 积木单体尺寸大幅放大（tileW 84, tileH 46, cubeH 58）
-    const tileW = 84;
-    const tileH = 46;
-    const cubeH = 58;
+    const canvas = document.createElement('canvas');
+    canvas.className = 'blocks-3d-canvas';
+    const cssW = 460;
+    const cssH = 265;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.width = `${cssW}px`;
+    canvas.style.height = `${cssH}px`;
 
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    const rotateHintBadge = document.createElement('div');
+    rotateHintBadge.className = 'blocks-rotate-hint';
+    rotateHintBadge.innerHTML = '🔄 按住拖动可 360° 旋转视角';
 
-    // 先计算所有积木顶点的外接包围盒，以便自适应 viewBox
-    for (let x = 0; x < 3; x++) {
-      for (let y = 0; y < 3; y++) {
-        if (grid[x][y] > 0) {
-          for (let z = 0; z < grid[x][y]; z++) {
-            const posX = (x - y) * (tileW / 2);
-            const posY = (x + y) * (tileH / 2) - z * cubeH;
-            const pts = [
-              [posX, posY - tileH / 2],
-              [posX + tileW / 2, posY],
-              [posX, posY + tileH / 2],
-              [posX - tileW / 2, posY],
-              [posX - tileW / 2, posY + cubeH],
-              [posX, posY + tileH / 2 + cubeH],
-              [posX + tileW / 2, posY + cubeH]
-            ];
-            pts.forEach(([px, py]) => {
-              if (px < minX) minX = px;
-              if (px > maxX) maxX = px;
-              if (py < minY) minY = py;
-              if (py > maxY) maxY = py;
-            });
-          }
+    canvasWrap.appendChild(canvas);
+    canvasWrap.appendChild(rotateHintBadge);
+    blockContainer.appendChild(canvasWrap);
+
+    const counterBadge = document.createElement('span');
+    counterBadge.className = 'block-counter-pill';
+    counterBadge.textContent = '✨ 已点亮: 0 块';
+
+    // 构建 3D 立方体列表 (gx, gy, gz)
+    const cubes = [];
+    for (let gx = 0; gx < 3; gx++) {
+      for (let gy = 0; gy < 3; gy++) {
+        for (let gz = 0; gz < grid[gx][gy]; gz++) {
+          cubes.push({
+            gx,
+            gy,
+            gz,
+            clicked: false,
+            clickOrder: 0
+          });
         }
       }
     }
 
-    // 设置紧凑完美的 viewBox，让积木铺满画布，视觉面积放大 4~5 倍！
-    const pad = 24;
-    const vbW = Math.round(maxX - minX + pad * 2);
-    const vbH = Math.round(maxY - minY + pad * 2);
-    const vbX = Math.round(minX - pad);
-    const vbY = Math.round(minY - pad);
-    svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
+    // 3D 相机姿态角：yaw 水平旋转角（默认 42° 经典斜等轴视角），pitch 俯仰角（默认 30°）
+    const defaultYaw = Math.PI * 0.23;
+    const defaultPitch = Math.PI * 0.175;
+    let yaw = defaultYaw;
+    let pitch = defaultPitch;
+    const scale = 52;
+    const centerX = cssW / 2;
+    const centerY = cssH * 0.60;
 
-    // 按照从后向前、从下到上的顺序渲染，保证遮挡关系正确
-    for (let sum = 0; sum <= 4; sum++) {
-      for (let x = 0; x <= sum; x++) {
-        let y = sum - x;
-        if (x < 3 && y < 3 && grid[x][y] > 0) {
-          for (let z = 0; z < grid[x][y]; z++) {
-            const posX = (x - y) * (tileW / 2);
-            const posY = (x + y) * (tileH / 2) - z * cubeH;
+    // 存放当前帧前面可点击的 2D 多边形用于精确点击拾取
+    let interactivePolys = [];
 
-            // 绘制一个 3D 立方体：顶面、左面、右面
-            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            g.setAttribute('class', 'isometric-cube');
-            g.setAttribute('title', '点击点亮积木');
+    // 3D 坐标转 2D 屏幕坐标与相机深度
+    // 世界坐标系：x, y ∈ [-1.5, 1.5]，z ∈ [0, 3] (向上为 +z)
+    const projectPoint = (wx, wy, wz) => {
+      const cosY = Math.cos(yaw);
+      const sinY = Math.sin(yaw);
+      const cosP = Math.cos(pitch);
+      const sinP = Math.sin(pitch);
 
-            // 交互：点击积木会有金色高亮提示和清脆音效
-            g.addEventListener('click', (e) => {
-              e.stopPropagation();
-              window.soundManager.playPop();
-              g.classList.toggle('cube-clicked');
-            });
+      const x1 = wx * cosY - wy * sinY;
+      const y1 = wx * sinY + wy * cosY;
+      const z1 = wz - 0.7;
 
-            // 顶面
-            const topPolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            topPolygon.setAttribute('points', `${posX},${posY - tileH/2} ${posX + tileW/2},${posY} ${posX},${posY + tileH/2} ${posX - tileW/2},${posY}`);
-            topPolygon.setAttribute('class', 'cube-face-top');
+      const sx = centerX + scale * x1;
+      const sy = centerY + scale * (y1 * sinP - z1 * cosP);
+      const depth = y1 * cosP + z1 * sinP;
+      return { x: sx, y: sy, depth };
+    };
 
-            // 左面
-            const leftPolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            leftPolygon.setAttribute('points', `${posX - tileW/2},${posY} ${posX},${posY + tileH/2} ${posX},${posY + tileH/2 + cubeH} ${posX - tileW/2},${posY + cubeH}`);
-            leftPolygon.setAttribute('class', 'cube-face-left');
+    // 颜色明暗辅助函数
+    const shadeRGB = (r, g, b, factor, alpha = 1) => {
+      const clamp = (v) => Math.max(0, Math.min(255, Math.round(v * factor)));
+      return `rgba(${clamp(r)}, ${clamp(g)}, ${clamp(b)}, ${alpha})`;
+    };
 
-            // 右面
-            const rightPolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            rightPolygon.setAttribute('points', `${posX},${posY + tileH/2} ${posX + tileW/2},${posY} ${posX + tileW/2},${posY + cubeH} ${posX},${posY + tileH/2 + cubeH}`);
-            rightPolygon.setAttribute('class', 'cube-face-right');
+    const ctx = canvas.getContext('2d');
 
-            g.appendChild(topPolygon);
-            g.appendChild(leftPolygon);
-            g.appendChild(rightPolygon);
-            svg.appendChild(g);
+    const renderScene = () => {
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, cssW, cssH);
+      interactivePolys = [];
+
+      const cosY = Math.cos(yaw);
+      const sinY = Math.sin(yaw);
+      const cosP = Math.cos(pitch);
+      const sinP = Math.sin(pitch);
+
+      // 相机视线方向向量 V (从场景指向相机)
+      const vx = sinY * cosP;
+      const vy = cosY * cosP;
+      const vz = sinP;
+
+      // 1. 绘制 3x3 立体底座托盘 (帮助孩子在旋转时清晰分辨前后左右 9 宫格位置)
+      const baseZTop = 0;
+      const baseZBot = -0.16;
+      const bCornersTop = [
+        projectPoint(-1.62, -1.62, baseZTop),
+        projectPoint(1.62, -1.62, baseZTop),
+        projectPoint(1.62, 1.62, baseZTop),
+        projectPoint(-1.62, 1.62, baseZTop)
+      ];
+      const bCornersBot = [
+        projectPoint(-1.62, -1.62, baseZBot),
+        projectPoint(1.62, -1.62, baseZBot),
+        projectPoint(1.62, 1.62, baseZBot),
+        projectPoint(-1.62, 1.62, baseZBot)
+      ];
+
+      // 底座侧面
+      for (let i = 0; i < 4; i++) {
+        const next = (i + 1) % 4;
+        ctx.beginPath();
+        ctx.moveTo(bCornersTop[i].x, bCornersTop[i].y);
+        ctx.lineTo(bCornersTop[next].x, bCornersTop[next].y);
+        ctx.lineTo(bCornersBot[next].x, bCornersBot[next].y);
+        ctx.lineTo(bCornersBot[i].x, bCornersBot[i].y);
+        ctx.closePath();
+        ctx.fillStyle = '#CBD5E1';
+        ctx.fill();
+        ctx.strokeStyle = '#94A3B8';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // 底座顶面
+      ctx.beginPath();
+      bCornersTop.forEach((p, idx) => (idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.fillStyle = '#F1F5F9';
+      ctx.fill();
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 底座 3x3 宫格线
+      for (let gx = 0; gx < 3; gx++) {
+        for (let gy = 0; gy < 3; gy++) {
+          const x0 = gx - 1.5, x1 = gx - 0.5;
+          const y0 = gy - 1.5, y1 = gy - 0.5;
+          const cellPts = [
+            projectPoint(x0, y0, baseZTop),
+            projectPoint(x1, y0, baseZTop),
+            projectPoint(x1, y1, baseZTop),
+            projectPoint(x0, y1, baseZTop)
+          ];
+          ctx.beginPath();
+          cellPts.forEach((p, idx) => (idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+          ctx.closePath();
+          ctx.fillStyle = (gx + gy) % 2 === 0 ? '#E2E8F0' : '#F8FAFC';
+          ctx.fill();
+          ctx.strokeStyle = '#CBD5E1';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+
+      // 2. 对所有 3D 积木按相机空间深度从远到近严格拓扑排序 (零穿模)
+      const sortedCubes = [...cubes].sort((a, b) => {
+        const da = (a.gx - 1) * vx + (a.gy - 1) * vy + (a.gz + 0.5) * vz;
+        const db = (b.gx - 1) * vx + (b.gy - 1) * vy + (b.gz + 0.5) * vz;
+        return da - db;
+      });
+
+      // 光源方向向量 (左前上方来光)
+      const lx = 0.35, ly = 0.55, lz = 0.75;
+
+      // 6 个标准面的顶点偏移与外法线
+      const faceDefs = [
+        { name: 'top',    n: [0, 0, 1],  verts: [[0,0,1], [1,0,1], [1,1,1], [0,1,1]] },
+        { name: 'bottom', n: [0, 0, -1], verts: [[0,0,0], [0,1,0], [1,1,0], [1,0,0]] },
+        { name: 'frontX', n: [1, 0, 0],  verts: [[1,0,0], [1,1,0], [1,1,1], [1,0,1]] },
+        { name: 'backX',  n: [-1, 0, 0], verts: [[0,0,0], [0,0,1], [0,1,1], [0,1,0]] },
+        { name: 'frontY', n: [0, 1, 0],  verts: [[0,1,0], [0,1,1], [1,1,1], [1,1,0]] },
+        { name: 'backY',  n: [0, -1, 0], verts: [[0,0,0], [1,0,0], [1,0,1], [0,0,1]] }
+      ];
+
+      sortedCubes.forEach((cube) => {
+        const x0 = cube.gx - 1.5;
+        const y0 = cube.gy - 1.5;
+        const z0 = cube.gz;
+
+        // 基础配色：点亮后为翡翠绿水晶色，未点亮按层高渐变暖琥珀木块色
+        let baseR = 245, baseG = 165, baseB = 36;
+        if (cube.clicked) {
+          baseR = 16; baseG = 185; baseB = 129;
+        } else if (cube.gz === 1) {
+          baseR = 251; baseG = 191; baseB = 36;
+        } else if (cube.gz >= 2) {
+          baseR = 252; baseG = 211; baseB = 77;
+        }
+
+        // 计算每个面在当前视角下的朝向与光照
+        const evaluatedFaces = faceDefs.map(f => {
+          const [nx, ny, nz] = f.n;
+          // 旋转法向量到视角空间
+          const rx = nx * cosY - ny * sinY;
+          const ry = nx * sinY + ny * cosY;
+          const rz = nz;
+          const camDot = ry * cosP + rz * sinP;
+          const lightDot = rx * lx + ry * ly + rz * lz;
+          const brightness = 0.78 + Math.max(-0.2, Math.min(0.32, lightDot * 0.34));
+          const pts = f.verts.map(([dx, dy, dz]) => projectPoint(x0 + dx, y0 + dy, z0 + dz));
+          return {
+            name: f.name,
+            camDot,
+            brightness,
+            pts
+          };
+        });
+
+        if (this.xrayActive) {
+          // 透视模式：先画背面再画正面，半透明虚线边框
+          const ordered = [...evaluatedFaces].sort((a, b) => a.camDot - b.camDot);
+          ordered.forEach(f => {
+            if (f.camDot < -0.15) return; // 仅绘制正对与侧对的面，保持通透清晰
+            ctx.beginPath();
+            f.pts.forEach((p, idx) => (idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+            ctx.closePath();
+            ctx.fillStyle = shadeRGB(baseR, baseG, baseB, f.brightness, cube.clicked ? 0.65 : 0.38);
+            ctx.fill();
+            ctx.save();
+            ctx.setLineDash([5, 3]);
+            ctx.strokeStyle = cube.clicked ? '#047857' : '#D97706';
+            ctx.lineWidth = 1.8;
+            ctx.stroke();
+            ctx.restore();
+
+            if (f.camDot > 0) {
+              interactivePolys.push({ poly: f.pts, cube });
+            }
+          });
+        } else {
+          // 实心 3D 模式：仅绘制朝向相机的可见面 (Back-face culling)
+          evaluatedFaces.forEach(f => {
+            if (f.camDot <= 0.001) return;
+            ctx.beginPath();
+            f.pts.forEach((p, idx) => (idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+            ctx.closePath();
+            ctx.fillStyle = shadeRGB(baseR, baseG, baseB, f.brightness, 1);
+            ctx.fill();
+            ctx.strokeStyle = cube.clicked ? '#065F46' : '#B45309';
+            ctx.lineWidth = 2.2;
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            // 顶面绘制立体圆凸粒 (乐高/积木质感)
+            if (f.name === 'top') {
+              const studCenter = projectPoint(x0 + 0.5, y0 + 0.5, z0 + 1.04);
+              ctx.beginPath();
+              ctx.ellipse(studCenter.x, studCenter.y, scale * 0.22, scale * 0.22 * sinP, 0, 0, Math.PI * 2);
+              ctx.fillStyle = shadeRGB(baseR, baseG, baseB, f.brightness * 1.07, 1);
+              ctx.fill();
+              ctx.strokeStyle = cube.clicked ? '#047857' : '#B45309';
+              ctx.lineWidth = 1.4;
+              ctx.stroke();
+            }
+
+            interactivePolys.push({ poly: f.pts, cube });
+          });
+        }
+
+        // 如果该积木已被点击点亮，在其中心绘制醒目的序号徽章
+        if (cube.clicked && cube.clickOrder > 0) {
+          const centerPt = projectPoint(x0 + 0.5, y0 + 0.5, z0 + 0.55);
+          ctx.beginPath();
+          ctx.arc(centerPt.x, centerPt.y, 13, 0, Math.PI * 2);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fill();
+          ctx.strokeStyle = '#059669';
+          ctx.lineWidth = 2.2;
+          ctx.stroke();
+
+          ctx.font = '900 14px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+          ctx.fillStyle = '#065F46';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(cube.clickOrder.toString(), centerPt.x, centerPt.y + 1);
+        }
+      });
+
+      // 3. 若开启了“透视 & 头顶标数法”，在每根非空柱子正上方悬浮显示柱高数字
+      if (this.xrayActive) {
+        for (let gx = 0; gx < 3; gx++) {
+          for (let gy = 0; gy < 3; gy++) {
+            const h = grid[gx][gy];
+            if (h > 0) {
+              const topCenter = projectPoint(gx - 1.0, gy - 1.0, h + 0.22);
+              ctx.beginPath();
+              ctx.arc(topCenter.x, topCenter.y, 15, 0, Math.PI * 2);
+              ctx.fillStyle = '#1D4ED8';
+              ctx.fill();
+              ctx.strokeStyle = '#FFFFFF';
+              ctx.lineWidth = 2.5;
+              ctx.stroke();
+
+              ctx.font = '900 16px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+              ctx.fillStyle = '#FFFFFF';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(h.toString(), topCenter.x, topCenter.y + 1);
+            }
           }
         }
       }
-    }
 
-    blockContainer.appendChild(svg);
+      ctx.restore();
+    };
 
-    // 透视辅助按钮 (培养孩子的空间透视直觉)
+    // 射线/多边形点包含检测 (用于判断点击了哪块 3D 积木)
+    const isPointInPoly = (px, py, pts) => {
+      let inside = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const xi = pts[i].x, yi = pts[i].y;
+        const xj = pts[j].x, yj = pts[j].y;
+        const intersect = ((yi > py) !== (yj > py)) &&
+          (px < (xj - xi) * (py - yi) / ((yj - yi) || 1e-7) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    };
+
+    const recalculateClickOrders = () => {
+      const clickedList = cubes.filter(c => c.clicked).sort((a, b) => a.clickOrder - b.clickOrder);
+      clickedList.forEach((c, idx) => {
+        c.clickOrder = idx + 1;
+      });
+      counterBadge.textContent = `✨ 已点亮: ${clickedList.length} 块`;
+      return clickedList.length;
+    };
+
+    // 拖拽旋转与轻点选积木交互
+    let isDragging = false;
+    let dragDistance = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let spinAnimId = null;
+
+    const stopSpinAnim = () => {
+      if (spinAnimId) {
+        cancelAnimationFrame(spinAnimId);
+        spinAnimId = null;
+      }
+    };
+
+    const getCanvasCoords = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : (e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0].clientX : e.clientX);
+      const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : (e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0].clientY : e.clientY);
+      return {
+        x: (clientX - rect.left) * (cssW / (rect.width || cssW)),
+        y: (clientY - rect.top) * (cssH / (rect.height || cssH)),
+        rawX: clientX,
+        rawY: clientY
+      };
+    };
+
+    const onPointerDown = (e) => {
+      stopSpinAnim();
+      isDragging = true;
+      dragDistance = 0;
+      const pt = getCanvasCoords(e);
+      lastX = pt.rawX;
+      lastY = pt.rawY;
+      canvas.classList.add('grabbing');
+    };
+
+    const onPointerMove = (e) => {
+      if (!isDragging) return;
+      const pt = getCanvasCoords(e);
+      const dx = pt.rawX - lastX;
+      const dy = pt.rawY - lastY;
+      dragDistance += Math.hypot(dx, dy);
+      lastX = pt.rawX;
+      lastY = pt.rawY;
+
+      // 水平拖动 360° 自由旋转 yaw，垂直拖动调节俯仰角 pitch (10° ~ 76°)
+      yaw -= dx * 0.012;
+      pitch = Math.max(0.18, Math.min(1.32, pitch + dy * 0.01));
+      renderScene();
+    };
+
+    const onPointerUp = (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      canvas.classList.remove('grabbing');
+
+      // 如果移动距离很小，判定为轻点积木块计数
+      if (dragDistance < 8) {
+        const pt = getCanvasCoords(e);
+        for (let i = interactivePolys.length - 1; i >= 0; i--) {
+          const item = interactivePolys[i];
+          if (isPointInPoly(pt.x, pt.y, item.poly)) {
+            window.soundManager.playPop();
+            item.cube.clicked = !item.cube.clicked;
+            if (item.cube.clicked) {
+              item.cube.clickOrder = 999;
+            } else {
+              item.cube.clickOrder = 0;
+            }
+            const count = recalculateClickOrders();
+            if (item.cube.clicked) {
+              window.soundManager.speak(count.toString());
+            }
+            renderScene();
+            break;
+          }
+        }
+      }
+    };
+
+    canvas.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+
+    canvas.addEventListener('touchstart', onPointerDown, { passive: true });
+    window.addEventListener('touchmove', onPointerMove, { passive: true });
+    window.addEventListener('touchend', onPointerUp);
+
+    this.blocksCleanup = () => {
+      stopSpinAnim();
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('mouseup', onPointerUp);
+      window.removeEventListener('touchmove', onPointerMove);
+      window.removeEventListener('touchend', onPointerUp);
+    };
+
+    // 底部控制栏：计数胶囊 + 透视标数开关 + 360°环绕旋转按钮
+    const controlsRow = document.createElement('div');
+    controlsRow.className = 'blocks-controls-row';
+
     const xrayBtn = document.createElement('button');
     xrayBtn.className = 'xray-toggle-btn';
-    xrayBtn.innerHTML = `🔍 开启透视模式（找找隐藏积木）`;
+    xrayBtn.innerHTML = `🔍 透视 & 头顶标数`;
     xrayBtn.addEventListener('click', () => {
       this.xrayActive = !this.xrayActive;
-      svg.classList.toggle('xray-mode', this.xrayActive);
-      xrayBtn.textContent = this.xrayActive ? `👓 恢复实心模式` : `🔍 开启透视模式（找找隐藏积木）`;
-      window.soundManager.playPop();
+      xrayBtn.textContent = this.xrayActive ? `👓 恢复实心积木` : `🔍 透视 & 头顶标数`;
+      window.soundManager.playMagic();
+      if (this.xrayActive) {
+        this.setMascot('看积木顶上的蓝圈数字，代表这一柱有几块，还可以拖动转一圈观察哦！');
+      }
+      renderScene();
     });
 
-    blockContainer.appendChild(xrayBtn);
+    const spinBtn = document.createElement('button');
+    spinBtn.className = 'xray-toggle-btn spin-3d-btn';
+    spinBtn.innerHTML = `🔄 360° 环绕看一圈`;
+    spinBtn.addEventListener('click', () => {
+      stopSpinAnim();
+      window.soundManager.playPop();
+      const startYaw = yaw;
+      const targetYaw = defaultYaw + Math.PI * 2;
+      const startPitch = pitch;
+      const startTime = performance.now();
+      const duration = 1800;
+
+      const stepSpin = (now) => {
+        const t = Math.min(1, (now - startTime) / duration);
+        const ease = 1 - Math.pow(1 - t, 3);
+        yaw = startYaw + (targetYaw - startYaw) * ease;
+        pitch = startPitch + (defaultPitch - startPitch) * ease;
+        renderScene();
+        if (t < 1) {
+          spinAnimId = requestAnimationFrame(stepSpin);
+        } else {
+          yaw = defaultYaw;
+          pitch = defaultPitch;
+          spinAnimId = null;
+          renderScene();
+        }
+      };
+      spinAnimId = requestAnimationFrame(stepSpin);
+    });
+
+    controlsRow.appendChild(counterBadge);
+    controlsRow.appendChild(xrayBtn);
+    controlsRow.appendChild(spinBtn);
+    blockContainer.appendChild(controlsRow);
     this.questionZoneEl.appendChild(blockContainer);
+
+    renderScene();
 
     const minC = Math.max(1, totalBlocks - 3);
     const options = this.generateChoices(totalBlocks, minC, totalBlocks + 4, 4);
     this.renderOptions(options, totalBlocks);
   }
 
-  // ================= 8. 60秒极速挑战模式 (NEW! 计时闯关与连击爆发) =================
+  // ================= 8. 60秒极速挑战模式 (计时闯关、连击加分与最高分纪录) =================
   startSpeedrun() {
+    this.clearPendingTimers();
     this.speedrunActive = true;
     this.speedrunTimeLeft = 60;
     this.speedrunScore = 0;
@@ -1279,10 +1987,15 @@ class MathGameApp {
       this.speedrunTimerEl.textContent = '60';
       this.speedrunScoreEl.textContent = '0';
       this.speedrunComboEl.textContent = '0';
+      if (this.speedrunBestEl) this.speedrunBestEl.textContent = this.bestSprintScore.toString();
+      if (this.speedrunProgressEl) {
+        this.speedrunProgressEl.style.width = '100%';
+        this.speedrunProgressEl.classList.remove('danger');
+      }
     }
 
     window.soundManager.playFanfare();
-    this.setMascot("60秒极速挑战开始啦！连续答对星星翻倍！冲呀！🔥");
+    this.setMascot("60秒极速挑战开始啦！连续答对积分翻倍！冲呀！🔥");
 
     if (this.speedrunTimer) clearInterval(this.speedrunTimer);
     this.speedrunTimer = setInterval(() => {
@@ -1290,8 +2003,15 @@ class MathGameApp {
       if (this.speedrunTimerEl) {
         this.speedrunTimerEl.textContent = this.speedrunTimeLeft.toString();
       }
+      if (this.speedrunProgressEl) {
+        const pct = Math.max(0, (this.speedrunTimeLeft / 60) * 100);
+        this.speedrunProgressEl.style.width = `${pct}%`;
+        if (this.speedrunTimeLeft <= 10) {
+          this.speedrunProgressEl.classList.add('danger');
+        }
+      }
 
-      if (this.speedrunTimeLeft <= 10) {
+      if (this.speedrunTimeLeft <= 10 && this.speedrunTimeLeft > 0) {
         window.soundManager.playTick();
       }
 
@@ -1304,46 +2024,61 @@ class MathGameApp {
   }
 
   generateSpeedrunQuestion() {
-    // 随机从 加减法、比大小、规律小火车、十格阵 中快速选题
+    // 综合抽取：加减法、比大小、十格阵、规律小火车、奇妙时钟
     const rand = Math.random();
-    if (rand < 0.45) {
+    if (rand < 0.35) {
       this.generateArithmeticQuestion();
-    } else if (rand < 0.75) {
+    } else if (rand < 0.58) {
       this.generateComparisonQuestion();
-    } else {
+    } else if (rand < 0.76) {
       this.generateTenFrameQuestion();
+    } else if (rand < 0.90) {
+      this.generatePatternQuestion();
+    } else {
+      this.generateClockQuestion();
     }
   }
 
   finishSpeedrun() {
+    this.clearPendingTimers();
     clearInterval(this.speedrunTimer);
     this.speedrunTimer = null;
     this.speedrunActive = false;
 
     window.soundManager.playFanfare();
-    window.confetti.fire({ count: 120 });
+    window.confetti.fire({ count: 130 });
+
+    const isNewRecord = this.speedrunScore > this.bestSprintScore;
+    if (isNewRecord) {
+      this.bestSprintScore = this.speedrunScore;
+      localStorage.setItem('kid_math_best_sprint', this.bestSprintScore.toString());
+    }
 
     let rankTitle = '🌟 数学探索者';
-    if (this.speedrunScore >= 150) rankTitle = '👑 数学小神童';
-    else if (this.speedrunScore >= 80) rankTitle = '🏆 算术小达人';
-    else if (this.speedrunScore >= 40) rankTitle = '🚀 闪电探险家';
+    if (this.speedrunScore >= 160) rankTitle = '👑 数学传奇小神童';
+    else if (this.speedrunScore >= 100) rankTitle = '🏆 算术金牌小达人';
+    else if (this.speedrunScore >= 50) rankTitle = '🚀 闪电脑力探险家';
+
+    const earnedStars = Math.max(1, Math.floor(this.speedrunScore / 10));
 
     const summaryText = document.getElementById('sprint-summary-text');
     if (summaryText) {
       summaryText.innerHTML = `
         <div class="sprint-rank">${rankTitle}</div>
-        <div class="sprint-score-pill">总得分: <strong>${this.speedrunScore}</strong> 分</div>
-        <div class="sprint-stars-pill">本次赢取金星: <strong>+${Math.floor(this.speedrunScore / 10)}</strong> ⭐</div>
+        ${isNewRecord && this.speedrunScore > 0 ? `<div class="new-record-badge">🎉 刷新历史最高纪录！</div>` : ''}
+        <div class="sprint-score-pill">本轮得分: <strong>${this.speedrunScore}</strong> 分 (最高纪录: ${this.bestSprintScore} 分)</div>
+        <div class="sprint-stars-pill">奖励金星: <strong>+${earnedStars}</strong> ⭐</div>
       `;
     }
 
-    // 奖励金星
-    this.stars += Math.floor(this.speedrunScore / 10);
+    this.stars += earnedStars;
     this.saveStars();
 
     if (this.speedrunSummaryModal) {
       this.speedrunSummaryModal.classList.add('active');
     }
+
+    window.soundManager.speak(`时间到！你获得了 ${this.speedrunScore} 分，赢得 ${earnedStars} 颗小金星！`);
   }
 
   // ================= 通用选项渲染与作答校验 =================
@@ -1358,8 +2093,11 @@ class MathGameApp {
         choices.add(candidate);
       } else {
         let randVal = Math.floor(Math.random() * (max - min + 1)) + min;
-        choices.add(randVal);
+        if (randVal >= 0) choices.add(randVal);
       }
+    }
+    while (choices.size < count) {
+      choices.add(correctAnswer + choices.size);
     }
     return Array.from(choices).sort(() => 0.5 - Math.random());
   }
@@ -1377,23 +2115,31 @@ class MathGameApp {
   }
 
   checkAnswer(btnElement, selectedValue, correctValue) {
+    if (btnElement.disabled || btnElement.classList.contains('disabled-opt')) return;
     const isCorrect = (selectedValue.toString() === correctValue.toString());
+    const qType = this.currentQuestion ? this.currentQuestion.type : this.currentMode;
 
     if (isCorrect) {
       btnElement.classList.add('correct');
+      document.querySelectorAll('.option-card').forEach(b => b.disabled = true);
       window.soundManager.playCorrect();
       window.confetti.fire({ count: 65, x: window.innerWidth / 2, y: window.innerHeight * 0.4 });
 
-      // 比大小模式鳄鱼张嘴
-      if (this.currentMode === 'comparison') {
+      // 比大小模式鳄鱼张嘴与天平倾斜动画
+      if (qType === 'comparison') {
         const alligator = document.getElementById('scale-alligator');
         if (alligator) {
           alligator.innerHTML = `<div class="alligator-open pop-in">${correctValue}</div>`;
         }
+        const balanceBox = document.getElementById('balance-container');
+        if (balanceBox) {
+          if (correctValue === '>') balanceBox.classList.add('tilt-left');
+          else if (correctValue === '<') balanceBox.classList.add('tilt-right');
+        }
       }
 
       // 规律小火车启程
-      if (this.currentMode === 'patterns') {
+      if (qType === 'pattern') {
         const targetCar = document.getElementById('target-train-car');
         const mysteryQ = document.getElementById('mystery-train-q');
         if (targetCar && mysteryQ) {
@@ -1403,6 +2149,15 @@ class MathGameApp {
         }
         const trainTrack = document.getElementById('train-track-container');
         if (trainTrack) trainTrack.classList.add('train-chug');
+      }
+
+      // 算术填空题把问号替换为正确答案
+      if (qType === 'arithmetic') {
+        const blankBox = this.questionZoneEl.querySelector('.blank-box');
+        if (blankBox) {
+          blankBox.textContent = correctValue;
+          blankBox.classList.add('filled-correct');
+        }
       }
 
       this.streak++;
@@ -1426,11 +2181,11 @@ class MathGameApp {
           window.soundManager.playCombo();
         }
 
-        // 冲刺模式极速切换下一题 (仅0.5秒)
-        document.querySelectorAll('.option-card').forEach(b => b.disabled = true);
-        setTimeout(() => {
-          this.generateQuestion();
-        }, 500);
+        this.nextQuestionTimer = setTimeout(() => {
+          if (this.speedrunActive) {
+            this.generateQuestion();
+          }
+        }, 450);
         return;
       }
 
@@ -1444,7 +2199,18 @@ class MathGameApp {
         '太厉害啦，难题都被你攻克了！🌟',
         '答对啦！离扭蛋又近一步了！🎁'
       ];
-      const praise = praises[Math.floor(Math.random() * praises.length)];
+      let praise = praises[Math.floor(Math.random() * praises.length)];
+
+      // 时钟关卡给出专属时间教学总结
+      if (qType === 'clock' && this.currentQuestion) {
+        const { hour, minute } = this.currentQuestion;
+        praise = minute === 0
+          ? `答对啦！时针指着 ${hour}，分针指着 12，就是 ${hour} 点整！`
+          : (minute === 30
+              ? `太棒啦！时针走过 ${hour}，分针指着 6，就是 ${hour} 点半！`
+              : `完全正确！现在正是 ${hour} 点 ${minute} 分！`);
+      }
+
       this.setMascot(praise);
       window.soundManager.speak(praise);
 
@@ -1454,20 +2220,23 @@ class MathGameApp {
         </div>
       `;
 
-      document.querySelectorAll('.option-card').forEach(b => b.disabled = true);
-
       if (this.streak > 1 && this.streak % 3 === 0) {
         window.soundManager.playFanfare();
         this.setMascot(`太神奇了！连续答对 ${this.streak} 题了！快去扭蛋机看看吧！🎊`);
       }
 
-      setTimeout(() => {
+      this.nextQuestionTimer = setTimeout(() => {
         this.generateQuestion();
-      }, 1400);
+      }, 1450);
 
     } else {
+      // 立即禁用该错误选项，防止连续误触扣分
+      btnElement.disabled = true;
       btnElement.classList.add('wrong');
       window.soundManager.playWrong();
+
+      this.streak = 0;
+      this.updateStatsUI();
 
       if (this.speedrunActive) {
         this.speedrunCombo = 0;
@@ -1481,7 +2250,9 @@ class MathGameApp {
       ];
       const encText = encouragements[Math.floor(Math.random() * encouragements.length)];
       this.setMascot(encText);
-      window.soundManager.speak(encText);
+      if (!this.speedrunActive) {
+        window.soundManager.speak(encText);
+      }
 
       this.feedbackZoneEl.innerHTML = `
         <div class="feedback-badge retry wobble">
@@ -1508,12 +2279,12 @@ class MathGameApp {
     prizeDisplay.innerHTML = `
       <div class="egg-preview">
         <div class="egg-shell">🥚</div>
-        <p>点击按钮扭出神秘萌宠！</p>
+        <p>点击下方按钮扭出神秘萌宠！（已收集 ${this.unlockedStickers.length}/${this.stickerLibrary.length}）</p>
       </div>
     `;
 
     const remainingStars = this.stars;
-    costText.textContent = `当前星星: ⭐ ${remainingStars} (需要 ${this.eggCost} 颗星星扭一次)`;
+    costText.textContent = `当前星星: ⭐ ${remainingStars} (每 ${this.eggCost} 颗星星可扭一次)`;
 
     if (remainingStars >= this.eggCost) {
       drawBtn.disabled = false;
@@ -1530,7 +2301,6 @@ class MathGameApp {
 
     this.stars -= this.eggCost;
     this.saveStars();
-    this.updateStatsUI();
 
     const drawBtn = document.getElementById('draw-egg-btn');
     drawBtn.disabled = true;
@@ -1539,18 +2309,18 @@ class MathGameApp {
     prizeDisplay.innerHTML = `
       <div class="egg-rolling">
         <div class="egg-animated">🔮</div>
-        <p class="rolling-text">扭蛋滚动中... 呼噜噜~</p>
+        <p class="rolling-text">扭蛋旋转中... 呼噜噜~</p>
       </div>
     `;
 
-    window.soundManager.playPop();
+    window.soundManager.playGashaponRoll();
 
     setTimeout(() => {
       const uncollected = this.stickerLibrary.filter(s => !this.unlockedStickers.includes(s.id));
       let randomSticker;
       let isNew = false;
 
-      if (uncollected.length > 0 && Math.random() < 0.8) {
+      if (uncollected.length > 0 && Math.random() < 0.85) {
         randomSticker = uncollected[Math.floor(Math.random() * uncollected.length)];
         isNew = true;
       } else {
@@ -1568,30 +2338,46 @@ class MathGameApp {
 
       prizeDisplay.innerHTML = `
         <div class="prize-card pop-in">
-          <div class="prize-badge">${isNew ? '✨ 新伙伴加入！' : '🎉 获得闪亮金光贴纸！'}</div>
+          <div class="prize-badge">${isNew ? '✨ 新伙伴加入！' : '🎉 获得闪亮贴纸！'}</div>
           <div class="prize-emoji">${randomSticker.emoji}</div>
           <div class="prize-name">${randomSticker.name}</div>
           <div class="prize-title">【${randomSticker.title}】</div>
         </div>
       `;
 
-      const voiceMsg = isNew ? `恭喜你！解锁了新伙伴：${randomSticker.name}！` : `获得了可爱的${randomSticker.name}！`;
+      const voiceMsg = isNew
+        ? `恭喜你！解锁了新伙伴：${randomSticker.name}！${randomSticker.soundText}`
+        : `获得了可爱的${randomSticker.name}！`;
       window.soundManager.speak(voiceMsg);
 
-      this.updateGashaponUI();
-    }, 1200);
+      const remainingStars = this.stars;
+      const costText = document.getElementById('gashapon-cost-text');
+      if (costText) {
+        costText.textContent = `当前星星: ⭐ ${remainingStars} (每 ${this.eggCost} 颗星星可扭一次)`;
+      }
+      if (remainingStars >= this.eggCost) {
+        drawBtn.disabled = false;
+        drawBtn.textContent = '🎰 再扭一次！(消耗 3 颗⭐)';
+        drawBtn.onclick = () => this.drawEgg();
+      } else {
+        drawBtn.disabled = true;
+        drawBtn.textContent = `还需要 ${this.eggCost - remainingStars} 颗⭐ 才能扭蛋`;
+      }
+    }, 1100);
   }
 
-  // ================= 贴纸乐园 / 收集手册 =================
+  // ================= 贴纸乐园 / 收集手册 (支持拖拽持久化与场景切换) =================
   openStickerBook() {
     this.stickerBookModal.classList.add('active');
     this.renderStickerBook();
     this.renderPlaygroundBar();
+    this.restorePlaygroundScene();
   }
 
   renderStickerBook() {
     const grid = document.getElementById('stickers-grid');
     const unlockedCountEl = document.getElementById('unlocked-sticker-count');
+    if (!grid || !unlockedCountEl) return;
     grid.innerHTML = '';
 
     unlockedCountEl.textContent = `${this.unlockedStickers.length} / ${this.stickerLibrary.length}`;
@@ -1625,11 +2411,20 @@ class MathGameApp {
     });
   }
 
+  applyPlaygroundTheme() {
+    const playground = document.getElementById('sticker-playground-canvas');
+    if (!playground) return;
+    this.playgroundThemes.forEach(t => playground.classList.remove(t));
+    const currentTheme = this.playgroundThemes[this.playgroundBgIndex] || 'theme-meadow';
+    playground.classList.add(currentTheme);
+  }
+
   renderPlaygroundBar() {
     const bar = document.getElementById('playground-stickers-bar');
     const playground = document.getElementById('sticker-playground-canvas');
     if (!bar || !playground) return;
 
+    this.applyPlaygroundTheme();
     bar.innerHTML = '';
     const unlockedItems = this.stickerLibrary.filter(s => this.unlockedStickers.includes(s.id));
 
@@ -1641,31 +2436,88 @@ class MathGameApp {
 
       chip.addEventListener('click', () => {
         window.soundManager.playPop();
-        this.addStickerToPlayground(item, playground);
+        const pWidth = playground.clientWidth > 100 ? playground.clientWidth : 480;
+        const pHeight = playground.clientHeight > 80 ? playground.clientHeight : 220;
+        const x = Math.floor(Math.random() * (pWidth - 80)) + 20;
+        const y = Math.floor(Math.random() * (pHeight - 80)) + 20;
+        const entry = { uid: Date.now() + Math.random(), id: item.id, x, y };
+        this.playgroundScene.push(entry);
+        this.savePlaygroundScene();
+        this.mountStickerElement(item, entry, playground);
       });
 
       bar.appendChild(chip);
     });
   }
 
-  addStickerToPlayground(item, playground) {
+  restorePlaygroundScene() {
+    const playground = document.getElementById('sticker-playground-canvas');
+    if (!playground) return;
+    this.applyPlaygroundTheme();
+    playground.innerHTML = '';
+
+    this.playgroundScene.forEach(entry => {
+      const item = this.stickerLibrary.find(s => s.id === entry.id);
+      if (item) {
+        this.mountStickerElement(item, entry, playground);
+      }
+    });
+  }
+
+  mountStickerElement(item, entry, playground) {
     const el = document.createElement('div');
     el.className = 'placed-playground-sticker pop-in';
     el.textContent = item.emoji;
-
-    const pWidth = playground.clientWidth > 100 ? playground.clientWidth : 360;
-    const pHeight = playground.clientHeight > 80 ? playground.clientHeight : 220;
-
-    const x = Math.floor(Math.random() * (pWidth - 80)) + 20;
-    const y = Math.floor(Math.random() * (pHeight - 80)) + 20;
-    el.style.left = `${x}px`;
-    el.style.top = `${y}px`;
+    el.style.left = `${entry.x}px`;
+    el.style.top = `${entry.y}px`;
 
     let isDragging = false;
-    let startX, startY, origX, origY;
+    let hasMoved = false;
+    let startX = 0, startY = 0, origX = 0, origY = 0;
+
+    const onPointerMove = (e) => {
+      if (!isDragging) return;
+      const curW = playground.clientWidth > 100 ? playground.clientWidth : 480;
+      const curH = playground.clientHeight > 80 ? playground.clientHeight : 220;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        hasMoved = true;
+      }
+      const nextX = Math.max(4, Math.min(curW - 56, origX + dx));
+      const nextY = Math.max(4, Math.min(curH - 56, origY + dy));
+      el.style.left = `${nextX}px`;
+      el.style.top = `${nextY}px`;
+      entry.x = nextX;
+      entry.y = nextY;
+    };
+
+    const onPointerEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      el.style.zIndex = '10';
+      document.removeEventListener('mousemove', onPointerMove);
+      document.removeEventListener('mouseup', onPointerEnd);
+      document.removeEventListener('touchmove', onPointerMove);
+      document.removeEventListener('touchend', onPointerEnd);
+
+      if (hasMoved) {
+        this.savePlaygroundScene();
+      } else {
+        // 轻点（未拖动）时触发跳跃并发音
+        window.soundManager.playStar();
+        el.classList.add('jumping');
+        window.soundManager.speak(item.soundText || item.name);
+        setTimeout(() => el.classList.remove('jumping'), 600);
+      }
+    };
 
     const onPointerDown = (e) => {
+      e.stopPropagation();
       isDragging = true;
+      hasMoved = false;
       el.style.zIndex = '100';
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -1674,41 +2526,15 @@ class MathGameApp {
       origX = el.offsetLeft;
       origY = el.offsetTop;
       window.soundManager.playPop();
-    };
 
-    const onPointerMove = (e) => {
-      if (!isDragging) return;
-      const curW = playground.clientWidth > 100 ? playground.clientWidth : 360;
-      const curH = playground.clientHeight > 80 ? playground.clientHeight : 220;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const dx = clientX - startX;
-      const dy = clientY - startY;
-      el.style.left = `${Math.max(0, Math.min(curW - 60, origX + dx))}px`;
-      el.style.top = `${Math.max(0, Math.min(curH - 60, origY + dy))}px`;
-    };
-
-    const onPointerEnd = () => {
-      if (!isDragging) return;
-      isDragging = false;
-      el.style.zIndex = '10';
+      document.addEventListener('mousemove', onPointerMove);
+      document.addEventListener('mouseup', onPointerEnd);
+      document.addEventListener('touchmove', onPointerMove, { passive: true });
+      document.addEventListener('touchend', onPointerEnd);
     };
 
     el.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('mousemove', onPointerMove);
-    document.addEventListener('mouseup', onPointerEnd);
-
     el.addEventListener('touchstart', onPointerDown, { passive: true });
-    document.addEventListener('touchmove', onPointerMove, { passive: true });
-    document.addEventListener('touchend', onPointerEnd);
-
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      window.soundManager.playStar();
-      el.classList.add('jumping');
-      window.soundManager.speak(item.soundText || item.name);
-      setTimeout(() => el.classList.remove('jumping'), 600);
-    });
 
     playground.appendChild(el);
   }

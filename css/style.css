@@ -321,11 +321,33 @@ body {
   background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
   border: 2.5px solid #F97316;
   border-radius: 16px;
-  padding: 6px 18px;
+  padding: 10px 18px 6px;
   margin-bottom: 8px;
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
   animation: popIn 0.3s ease;
+}
+
+.speedrun-progress-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: rgba(249, 115, 22, 0.18);
+}
+
+.speedrun-progress-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #10B981, #F59E0B);
+  transition: width 0.95s linear, background 0.3s ease;
+}
+
+.speedrun-progress-fill.danger {
+  background: linear-gradient(90deg, #EF4444, #DC2626);
 }
 
 .speedrun-hud-item {
@@ -534,6 +556,13 @@ body {
   border-radius: 22px;
 }
 
+.counting-board.counting-grid-10 {
+  display: grid;
+  grid-template-columns: repeat(10, auto);
+  gap: 10px 12px;
+  justify-items: center;
+}
+
 .countable-item {
   width: min(8vh, 66px);
   height: min(8vh, 66px);
@@ -595,7 +624,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 160px;
+  min-width: 145px;
+  position: relative;
 }
 
 .counting-group-box:hover {
@@ -616,7 +646,7 @@ body {
 }
 
 .counting-group-box .group-items {
-  font-size: 28px;
+  font-size: 26px;
   letter-spacing: 2px;
 }
 
@@ -627,6 +657,27 @@ body {
   justify-content: center;
   gap: 18px;
   width: 100%;
+  transition: transform 0.35s ease;
+}
+
+.balance-container.tilt-left .left-plate {
+  transform: translateY(10px);
+  border-color: #10B981;
+  background: #ECFDF5;
+}
+
+.balance-container.tilt-left .right-plate {
+  transform: translateY(-8px);
+}
+
+.balance-container.tilt-right .right-plate {
+  transform: translateY(10px);
+  border-color: #10B981;
+  background: #ECFDF5;
+}
+
+.balance-container.tilt-right .left-plate {
+  transform: translateY(-8px);
 }
 
 .scale-plate {
@@ -638,6 +689,12 @@ body {
   padding: 14px 18px;
   text-align: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.scale-plate:hover {
+  border-color: #93C5FD;
 }
 
 .plate-expr {
@@ -649,6 +706,20 @@ body {
   align-items: center;
   justify-content: center;
   letter-spacing: 1px;
+}
+
+.plate-dots {
+  font-size: 16px;
+  letter-spacing: 2px;
+  margin-top: 4px;
+  min-height: 22px;
+}
+
+.plate-hint-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: #059669;
+  margin-top: 4px;
 }
 
 .scale-middle {
@@ -685,11 +756,13 @@ body {
   color: #065F46;
 }
 
-/* 3. 算术算式展示 (特大号清晰算式) */
+/* 3. 算术算式展示 (特大号清晰算式 + 凑十破十小妙招提示) */
 .arithmetic-card-display {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   padding: 16px 36px;
   background: #F8FAFC;
   border: 2.5px solid #E2E8F0;
@@ -701,6 +774,23 @@ body {
   font-weight: 900;
   color: #1E293B;
   letter-spacing: 2px;
+}
+
+.arithmetic-strategy-pill {
+  background: #EFF6FF;
+  border: 1.5px solid #BFDBFE;
+  color: #1D4ED8;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 6px 16px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s;
+}
+
+.arithmetic-strategy-pill:hover {
+  transform: scale(1.03);
+  background: #DBEAFE;
 }
 
 .blank-box {
@@ -716,6 +806,13 @@ body {
   margin: 0 6px;
   vertical-align: middle;
   font-size: 46px;
+  transition: all 0.25s ease;
+}
+
+.blank-box.filled-correct {
+  background: #D1FAE5;
+  border: 3px solid #10B981;
+  color: #065F46;
 }
 
 /* 4. 找规律小火车 */
@@ -807,6 +904,16 @@ body {
 }
 
 /* 5. 十格阵 (Ten-Frame) 样式：大号蒙氏教具风格，超大清晰 */
+.ten-frame-stage-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-height: 100%;
+}
+
 .ten-frame-wrapper {
   display: flex;
   justify-content: center;
@@ -830,15 +937,15 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .frame-label {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   color: #1E293B;
   background: #F1F5F9;
-  padding: 6px 16px;
+  padding: 5px 14px;
   border-radius: 14px;
   border: 1.5px solid #CBD5E1;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
@@ -850,7 +957,7 @@ body {
   font-weight: 900;
   color: #8B5CF6;
   text-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
-  margin-top: 32px;
+  margin-top: 28px;
   user-select: none;
 }
 
@@ -866,11 +973,11 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
-/* 双盒模式下的格子尺寸：大幅放大至 68px */
+/* 双盒模式下的格子尺寸：大幅放大至 66px */
 .dual-ten-frame-wrapper .ten-frame-cell {
-  width: clamp(54px, 6.6vw, 68px);
-  height: clamp(54px, 6.6vw, 68px);
-  font-size: clamp(34px, 4.4vw, 44px);
+  width: clamp(50px, 6.2vw, 66px);
+  height: clamp(50px, 6.2vw, 66px);
+  font-size: clamp(32px, 4.2vw, 42px);
 }
 
 /* 单盒模式下的格子尺寸：超大特写 86px */
@@ -888,13 +995,25 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.15s;
+  transition: transform 0.15s ease, background-color 0.15s, border-color 0.15s;
   user-select: none;
+  position: relative;
 }
 
 .ten-frame-cell:hover, .ten-frame-cell:active {
   transform: scale(1.06);
   background: #EFF6FF;
+}
+
+.ten-frame-cell.user-filled {
+  background: #FEF9C3;
+  border-color: #F59E0B;
+}
+
+.ten-frame-cell.taken-cell {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  border-style: dashed;
 }
 
 .ten-dot {
@@ -909,19 +1028,24 @@ body {
   opacity: 0.55;
 }
 
+.ten-dot.taken-dot {
+  opacity: 0.32;
+  filter: grayscale(0.4);
+}
+
 /* 6. 认识时钟 (Clock) 样式 (大号表盘数字与指针) */
 .analog-clock-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   max-height: 100%;
   justify-content: center;
   flex: 1;
 }
 
 .analog-clock-svg {
-  height: min(40vh, 290px);
+  height: min(39vh, 285px);
   width: auto;
   aspect-ratio: 1;
   filter: drop-shadow(0 8px 22px rgba(15, 23, 42, 0.12));
@@ -942,9 +1066,17 @@ body {
 
 .clock-num {
   font-family: inherit;
-  font-size: 21px;
+  font-size: 20px;
   font-weight: 900;
   fill: #0F172A;
+}
+
+.clock-min-num {
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  fill: #EF4444;
+  opacity: 0.85;
 }
 
 .clock-hand {
@@ -970,7 +1102,7 @@ body {
 .clock-legend {
   display: flex;
   gap: 20px;
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 800;
   background: #F8FAFC;
   padding: 6px 18px;
@@ -987,93 +1119,85 @@ body {
   color: #EF4444;
 }
 
-/* 7. 空间数积木 (Isometric 3D Blocks) 样式：超大清晰、醒目立体 */
+/* 7. 空间数积木 (3D 互动旋转模型) 样式：超大清晰、360° 可拖拽旋转 */
 .isometric-blocks-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   max-height: 100%;
   justify-content: center;
   flex: 1;
 }
 
-.isometric-svg {
-  height: min(42vh, 310px);
-  max-width: min(88vw, 460px);
+.blocks-3d-stage-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 45%, #FFFBEB 0%, #F8FAFC 75%);
+  border: 2.5px solid #E2E8F0;
+  border-radius: 24px;
+  padding: 4px 12px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.03), 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.blocks-3d-canvas {
+  max-height: min(37vh, 265px);
+  max-width: min(86vw, 460px);
   width: auto;
-  filter: drop-shadow(0 12px 28px rgba(180, 83, 9, 0.18));
-  overflow: visible;
-  transition: all 0.3s ease;
+  height: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
-.isometric-cube {
-  cursor: pointer;
-  transition: filter 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+.blocks-3d-canvas.grabbing {
+  cursor: grabbing;
 }
 
-.isometric-cube:hover {
-  filter: brightness(1.08);
+.blocks-rotate-hint {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid #CBD5E1;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 12px;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
-.isometric-cube.cube-clicked {
-  filter: brightness(1.22) drop-shadow(0 0 10px rgba(245, 158, 11, 0.85));
+.blocks-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.cube-face-top {
-  fill: #FDE68A;
-  stroke: #B45309;
-  stroke-width: 2.4;
-  stroke-linejoin: round;
-  transition: all 0.25s ease;
-}
-
-.cube-face-left {
-  fill: #F59E0B;
-  stroke: #B45309;
-  stroke-width: 2.4;
-  stroke-linejoin: round;
-  transition: all 0.25s ease;
-}
-
-.cube-face-right {
-  fill: #D97706;
-  stroke: #B45309;
-  stroke-width: 2.4;
-  stroke-linejoin: round;
-  transition: all 0.25s ease;
-}
-
-.isometric-svg.xray-mode .cube-face-top {
-  fill: rgba(254, 243, 199, 0.45);
-  stroke: #D97706;
-  stroke-width: 2.2;
-  stroke-dasharray: 6, 4;
-}
-
-.isometric-svg.xray-mode .cube-face-left {
-  fill: rgba(245, 158, 11, 0.45);
-  stroke: #D97706;
-  stroke-width: 2.2;
-  stroke-dasharray: 6, 4;
-}
-
-.isometric-svg.xray-mode .cube-face-right {
-  fill: rgba(217, 119, 6, 0.45);
-  stroke: #D97706;
-  stroke-width: 2.2;
-  stroke-dasharray: 6, 4;
+.block-counter-pill {
+  background: #FEF3C7;
+  border: 2px solid #FCD34D;
+  color: #B45309;
+  font-size: 15px;
+  font-weight: 900;
+  padding: 6px 14px;
+  border-radius: 20px;
 }
 
 .xray-toggle-btn {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
-  padding: 8px 24px;
-  border-radius: 22px;
+  padding: 6px 18px;
+  border-radius: 20px;
   background: #FFF7ED;
   color: #C2410C;
   border: 2px solid #FDBA74;
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.12);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
@@ -1082,6 +1206,17 @@ body {
 .xray-toggle-btn:hover, .xray-toggle-btn:active {
   transform: translateY(-2px);
   background: #FFEDD5;
+}
+
+.xray-toggle-btn.spin-3d-btn {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border-color: #93C5FD;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+}
+
+.xray-toggle-btn.spin-3d-btn:hover, .xray-toggle-btn.spin-3d-btn:active {
+  background: #DBEAFE;
 }
 
 /* 选项区域 (特大号选项文字，清晰有力，自适应水平居中) */
@@ -1387,6 +1522,17 @@ body {
   color: #EA580C;
 }
 
+.new-record-badge {
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  color: #B45309;
+  font-size: 15px;
+  font-weight: 900;
+  padding: 5px 16px;
+  border-radius: 18px;
+  border: 2px solid #F59E0B;
+  animation: pulseScale 1.2s infinite;
+}
+
 .sprint-score-pill, .sprint-stars-pill {
   font-size: 17px;
   color: #334155;
@@ -1489,6 +1635,32 @@ body {
 }
 
 /* 贴纸创意游乐场画布 */
+.playground-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.playground-toolbar .sub-explain {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748B;
+}
+
+.playground-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.candy-btn.btn-sm {
+  font-size: 12.5px;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
 .sticker-playground-canvas {
   width: 100%;
   height: 230px;
@@ -1497,7 +1669,23 @@ body {
   position: relative;
   overflow: hidden;
   border: 3px solid #7DD3FC;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  transition: background 0.4s ease;
+}
+
+.sticker-playground-canvas.theme-meadow {
+  background: linear-gradient(to bottom, #BAE6FD 0%, #E0F2FE 55%, #86EFAC 55%, #4ADE80 100%);
+  border-color: #7DD3FC;
+}
+
+.sticker-playground-canvas.theme-space {
+  background: radial-gradient(circle at 20% 25%, #312E81 0%, #1E1B4B 60%, #0F172A 100%);
+  border-color: #818CF8;
+}
+
+.sticker-playground-canvas.theme-ocean {
+  background: linear-gradient(to bottom, #7DD3FC 0%, #38BDF8 58%, #FDE68A 58%, #FCD34D 100%);
+  border-color: #38BDF8;
 }
 
 .placed-playground-sticker {

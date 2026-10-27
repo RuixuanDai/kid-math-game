@@ -1,12 +1,13 @@
-// 音频合成与语音助手模块 (纯 Web Audio API + SpeechSynthesis 优选自然人声)
+// 音频合成与语音助手模块 (纯 Web Audio API + NaturalTTS 自然人声引擎)
 class SoundManager {
   constructor() {
     this.ctx = null;
     this.soundEnabled = true;
     this.voiceEnabled = true;
+    this.tts = null;
     this.cachedVoice = null;
     this.initAudioContext();
-    this.initVoiceListener();
+    this.initTTS();
   }
 
   initAudioContext() {
@@ -19,13 +20,26 @@ class SoundManager {
   ensureContext() {
     if (!this.ctx) this.initAudioContext();
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
+    }
+    if (this.tts && typeof this.tts.unlock === 'function') {
+      this.tts.unlock();
     }
   }
 
-  initVoiceListener() {
-    if ('speechSynthesis' in window) {
-      // 监听语音库加载 (在 iOS Safari 与 Chrome 中初始为异步加载)
+  initTTS() {
+    if (typeof window.NaturalTTS === 'function') {
+      this.tts = new window.NaturalTTS({
+        lang: 'zh-CN',
+        rate: 0.92,
+        pitch: 1.0,
+        volume: 1.0,
+        filterEmojis: true,
+        normalizeMath: true,
+        cancelPrevious: true,
+        autoUnlock: true
+      });
+    } else if ('speechSynthesis' in window) {
       window.speechSynthesis.onvoiceschanged = () => {
         this.cachedVoice = this.getBestChineseVoice();
       };
@@ -33,24 +47,20 @@ class SoundManager {
     }
   }
 
-  // 智能优选高品质自然中文人声 (过滤掉机械刺耳的底层合成音)
+  // 智能优选高品质自然中文人声 (后备方案)
   getBestChineseVoice() {
+    if (this.tts) return this.tts.getBestVoice('zh-CN');
     if (!('speechSynthesis' in window)) return null;
     const voices = window.speechSynthesis.getVoices();
     if (!voices || voices.length === 0) return null;
 
-    // 优先选择微软、iOS/iPadOS 官方的高品质自然温柔人声
     const preferredNames = [
-      // 微软自然人声 (极度柔和拟真)
       'xiaoxiao', 'yunxi', 'xiaoyi', 'natural', 'neural',
-      // iOS / iPadOS 高级自然女声 (iPad 上音质最佳)
       'tingting (enhanced)', 'ting-ting (enhanced)', 'tingting', 'ting-ting',
       'yu-shu', 'sin-ji', 'meijia', 'siri', 'lili',
-      // Android / Chrome 原生优化语音
       'cce-network', 'cce-local', '普通话'
     ];
 
-    // 梯队 1: 命中精选自然人声名单且语言为中文
     for (const pref of preferredNames) {
       const match = voices.find(v => {
         const name = (v.name || '').toLowerCase();
@@ -60,14 +70,12 @@ class SoundManager {
       if (match) return match;
     }
 
-    // 梯队 2: 大陆普通话 (zh-CN 或 cmn-Hans-CN)
     const zhCn = voices.find(v => {
       const lang = (v.lang || '').toLowerCase();
       return lang === 'zh-cn' || lang === 'cmn-hans-cn' || lang === 'zh_cn';
     });
     if (zhCn) return zhCn;
 
-    // 梯队 3: 任意标准中文 (排除粤语优先)
     const anyZh = voices.find(v => {
       const lang = (v.lang || '').toLowerCase();
       return (lang.includes('zh') || lang.includes('cmn')) && !lang.includes('hk') && !lang.includes('yue');
@@ -87,17 +95,67 @@ class SoundManager {
       const now = this.ctx.currentTime;
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(400, now);
-      osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+      osc.frequency.setValueAtTime(420, now);
+      osc.frequency.exponentialRampToValueAtTime(840, now + 0.075);
 
-      gain.gain.setValueAtTime(0.3, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.075);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
       osc.start(now);
-      osc.stop(now + 0.08);
+      osc.stop(now + 0.075);
+    } catch (e) {
+      console.warn("Audio error:", e);
+    }
+  }
+
+  // 魔法闪烁音效 (用于凑十动画、透视切换等)
+  playMagic() {
+    if (!this.soundEnabled) return;
+    try {
+      this.ensureContext();
+      const now = this.ctx.currentTime;
+      const notes = [659.25, 783.99, 987.77, 1318.51, 1567.98];
+      notes.forEach((freq, i) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const t = now + i * 0.045;
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.18, t);
+        gain.gain.exponentialRampToValueAtTime(0.005, t + 0.18);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.18);
+      });
+    } catch (e) {
+      console.warn("Audio error:", e);
+    }
+  }
+
+  // 扭蛋机旋转音乐音效
+  playGashaponRoll() {
+    if (!this.soundEnabled) return;
+    try {
+      this.ensureContext();
+      const now = this.ctx.currentTime;
+      const seq = [392, 440, 493.88, 523.25, 587.33, 659.25, 783.99, 880];
+      seq.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const t = now + idx * 0.11;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.22, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.1);
+      });
     } catch (e) {
       console.warn("Audio error:", e);
     }
@@ -114,7 +172,7 @@ class SoundManager {
       notes.forEach((freq, index) => {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        const startTime = now + index * 0.07;
+        const startTime = now + index * 0.065;
         const duration = 0.25;
 
         osc.type = 'triangle';
@@ -148,7 +206,7 @@ class SoundManager {
       osc.frequency.setValueAtTime(320, now);
       osc.frequency.linearRampToValueAtTime(240, now + 0.18);
 
-      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.setValueAtTime(0.24, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
 
       osc.connect(gain);
@@ -275,42 +333,54 @@ class SoundManager {
     }
   }
 
-  // 过滤 Emoji 表情与特殊图形符号，确保语音朗读时不读出 emoji 名字（如“派对礼花”、“肌肉”等）
+  // 过滤 Emoji 表情与特殊图形符号，并将钟表时间和算式转化为自然中文口语
   cleanSpeechText(text) {
     if (!text || typeof text !== 'string') return '';
-    return text
-      // 过滤各类 Emoji、象形符号、杂项符号、变音符与拼装符
+    // 先把钟表时间如 3:00 转化为 3点整，3:30 转化为 3点半，3:15 转化为 3点15分
+    let normalized = text
+      .replace(/(\d{1,2}):00/g, '$1点整')
+      .replace(/(\d{1,2}):30/g, '$1点半')
+      .replace(/(\d{1,2}):(\d{2})/g, '$1点$2分');
+
+    if (this.tts) {
+      return this.tts.cleanText(normalized);
+    }
+
+    return normalized
       .replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F6FF}\u{FE00}-\u{FE0F}\u{200D}\u{2300}-\u{23FF}\u{2B50}]/gu, '')
-      // 将数学符号转化为亲切口语
       .replace(/\+/g, ' 加 ')
       .replace(/-/g, ' 减 ')
+      .replace(/[×*]/g, ' 乘 ')
+      .replace(/[÷/]/g, ' 除以 ')
       .replace(/=/g, ' 等于 ')
       .replace(/\?/g, '？')
       .replace(/!/g, '！')
-      // 标点去重与多余空格整理
       .replace(/[！!]+/g, '！')
       .replace(/[？?]+/g, '？')
       .replace(/\s+/g, ' ')
       .trim();
   }
 
-  // 语音播报（升级自然柔和幼教人声：语调设为1.0自然真声，语速从容，杜绝尖锐电子音，且自动剥离emoji）
+  // 语音播报
   speak(text) {
-    if (!this.voiceEnabled || !('speechSynthesis' in window)) return;
+    if (!this.voiceEnabled) return;
+    const polished = this.cleanSpeechText(text);
+    if (!polished) return;
+
+    if (this.tts) {
+      this.tts.speak(polished);
+      return;
+    }
+
+    if (!('speechSynthesis' in window)) return;
     try {
-      window.speechSynthesis.cancel(); // 停止当前正在说的内容
-
-      // 文本语感润色与Emoji清洗
-      const polished = this.cleanSpeechText(text);
-      if (!polished) return; // 若全是表情，清理后为空则不发音
-
+      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(polished);
       utterance.lang = 'zh-CN';
-      utterance.rate = 0.92; // 稍慢从容，方便6岁儿童听清
-      utterance.pitch = 1.0; // 关键：恢复自然人声音高（此前1.25会导致机械变声严重）
+      utterance.rate = 0.92;
+      utterance.pitch = 1.0;
       utterance.volume = 1.0;
 
-      // 动态匹配当前系统最自然的中文人声
       if (!this.cachedVoice) {
         this.cachedVoice = this.getBestChineseVoice();
       }
