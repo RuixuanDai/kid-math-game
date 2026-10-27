@@ -1527,28 +1527,42 @@ class MathGameApp {
     let yaw = defaultYaw;
     let pitch = defaultPitch;
 
-    // 自适应画布尺寸与超大 3D 积木缩放比例
-    let cssW = 780;
-    let cssH = 380;
-    let scale = 82;
+    // 自适应画布尺寸与 3D 包围盒自动缩放比例（适配 iPad 12.9 / Air / Mini / 桌面等任意尺寸）
+    let cssW = 640;
+    let cssH = 280;
+    let scale = 52;
     let centerX = cssW / 2;
-    let centerY = cssH * 0.62;
+    let centerY = cssH / 2;
     const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+
+    const updateProjectionMetrics = () => {
+      // 以包络角计算 3D 模型（含 3x3 底座、最高积木柱及顶部透视标数球）的完整垂直跨度，确保任何角度都不超出画布框
+      const refPitch = Math.max(pitch, Math.PI * 0.22);
+      const sinRef = Math.sin(refPitch);
+      const cosRef = Math.cos(refPitch);
+      const minUnitY = -2.15 * sinRef - (maxColH + 0.55) * cosRef;
+      const maxUnitY = 2.29 * sinRef + 0.22 * cosRef;
+      const unitSpanY = maxUnitY - minUnitY;
+      const unitSpanX = 4.6;
+
+      // 预留约 16% 上下左右安全呼吸边距，彻底避免在大屏平板上溢出容器
+      scale = Math.min((cssW * 0.84) / unitSpanX, (cssH * 0.84) / unitSpanY, 72);
+      centerX = cssW / 2;
+
+      const curSinP = Math.sin(pitch);
+      const curCosP = Math.cos(pitch);
+      const curMinY = -2.15 * curSinP - (maxColH + 0.5) * curCosP;
+      const curMaxY = 2.29 * curSinP + 0.22 * curCosP;
+      centerY = (cssH / 2) - ((curMinY + curMaxY) / 2) * scale;
+    };
 
     const updateCanvasSize = () => {
       const rect = canvasWrap.getBoundingClientRect();
-      cssW = Math.max(480, Math.round((rect.width || 780) - 16));
-      cssH = Math.max(250, Math.round((rect.height || 380) - 10));
+      cssW = Math.max(280, Math.round(rect.width || 640));
+      cssH = Math.max(160, Math.round(rect.height || 260));
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);
-      canvas.style.width = `${cssW}px`;
-      canvas.style.height = `${cssH}px`;
-
-      // 根据当前画布高度和积木最高层数，最大化积木单体尺寸且保证旋转不裁切
-      const vSpan = maxColH >= 3 ? 4.45 : 3.85;
-      scale = Math.min(cssW / 4.8, cssH / vSpan);
-      centerX = cssW / 2;
-      centerY = cssH * (maxColH >= 3 ? 0.63 : 0.60);
+      updateProjectionMetrics();
     };
 
     // 存放当前帧前面可点击的 2D 多边形用于精确点击拾取
@@ -1564,7 +1578,7 @@ class MathGameApp {
 
       const x1 = wx * cosY - wy * sinY;
       const y1 = wx * sinY + wy * cosY;
-      const z1 = wz - 0.7;
+      const z1 = wz;
 
       const sx = centerX + scale * x1;
       const sy = centerY + scale * (y1 * sinP - z1 * cosP);
@@ -1581,6 +1595,7 @@ class MathGameApp {
     const ctx = canvas.getContext('2d');
 
     const renderScene = () => {
+      updateProjectionMetrics();
       ctx.save();
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, cssW, cssH);
@@ -1945,8 +1960,21 @@ class MathGameApp {
     };
     window.addEventListener('resize', onWindowResize);
 
+    let resizeObserver = null;
+    if (window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(() => {
+        updateCanvasSize();
+        renderScene();
+      });
+      resizeObserver.observe(canvasWrap);
+    }
+
     this.blocksCleanup = () => {
       stopSpinAnim();
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+      }
       window.removeEventListener('resize', onWindowResize);
       window.removeEventListener('mousemove', onPointerMove);
       window.removeEventListener('mouseup', onPointerUp);
