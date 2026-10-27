@@ -1852,10 +1852,14 @@ class MathGameApp {
       lastX = pt.rawX;
       lastY = pt.rawY;
       canvas.classList.add('grabbing');
+      if (e.pointerId !== undefined && canvas.setPointerCapture) {
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+      }
     };
 
     const onPointerMove = (e) => {
       if (!isDragging) return;
+      if (e.cancelable) e.preventDefault();
       const pt = getCanvasCoords(e);
       const dx = pt.rawX - lastX;
       const dy = pt.rawY - lastY;
@@ -1864,8 +1868,8 @@ class MathGameApp {
       lastY = pt.rawY;
 
       // 水平拖动 360° 自由旋转 yaw，垂直拖动调节俯仰角 pitch (10° ~ 76°)
-      yaw -= dx * 0.012;
-      pitch = Math.max(0.18, Math.min(1.32, pitch + dy * 0.01));
+      yaw -= dx * 0.014;
+      pitch = Math.max(0.18, Math.min(1.32, pitch + dy * 0.011));
       renderScene();
     };
 
@@ -1873,6 +1877,9 @@ class MathGameApp {
       if (!isDragging) return;
       isDragging = false;
       canvas.classList.remove('grabbing');
+      if (e.pointerId !== undefined && canvas.releasePointerCapture) {
+        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
 
       // 如果移动距离很小，判定为轻点积木块计数
       if (dragDistance < 8) {
@@ -1898,13 +1905,19 @@ class MathGameApp {
       }
     };
 
-    canvas.addEventListener('mousedown', onPointerDown);
-    window.addEventListener('mousemove', onPointerMove);
-    window.addEventListener('mouseup', onPointerUp);
-
-    canvas.addEventListener('touchstart', onPointerDown, { passive: true });
-    window.addEventListener('touchmove', onPointerMove, { passive: true });
-    window.addEventListener('touchend', onPointerUp);
+    if (window.PointerEvent) {
+      canvas.addEventListener('pointerdown', onPointerDown);
+      canvas.addEventListener('pointermove', onPointerMove);
+      canvas.addEventListener('pointerup', onPointerUp);
+      canvas.addEventListener('pointercancel', onPointerUp);
+    } else {
+      canvas.addEventListener('mousedown', onPointerDown);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+      canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+      window.addEventListener('touchmove', onPointerMove, { passive: false });
+      window.addEventListener('touchend', onPointerUp);
+    }
 
     this.blocksCleanup = () => {
       stopSpinAnim();
@@ -1914,9 +1927,44 @@ class MathGameApp {
       window.removeEventListener('touchend', onPointerUp);
     };
 
-    // 底部控制栏：计数胶囊 + 透视标数开关 + 360°环绕旋转按钮
+    const animateYawBy = (deltaYaw, duration = 420) => {
+      stopSpinAnim();
+      const startYaw = yaw;
+      const targetYaw = yaw + deltaYaw;
+      const startTime = performance.now();
+      const step = (now) => {
+        const t = Math.min(1, (now - startTime) / duration);
+        const ease = 1 - Math.pow(1 - t, 3);
+        yaw = startYaw + (targetYaw - startYaw) * ease;
+        renderScene();
+        if (t < 1) {
+          spinAnimId = requestAnimationFrame(step);
+        } else {
+          spinAnimId = null;
+        }
+      };
+      spinAnimId = requestAnimationFrame(step);
+    };
+
+    // 底部控制栏：计数胶囊 + 左转/右转 + 透视标数开关 + 360°环绕旋转按钮
     const controlsRow = document.createElement('div');
     controlsRow.className = 'blocks-controls-row';
+
+    const rotLeftBtn = document.createElement('button');
+    rotLeftBtn.className = 'xray-toggle-btn spin-3d-btn';
+    rotLeftBtn.innerHTML = `⏪ 左转`;
+    rotLeftBtn.addEventListener('click', () => {
+      window.soundManager.playPop();
+      animateYawBy(-Math.PI / 3, 380);
+    });
+
+    const rotRightBtn = document.createElement('button');
+    rotRightBtn.className = 'xray-toggle-btn spin-3d-btn';
+    rotRightBtn.innerHTML = `⏩ 右转`;
+    rotRightBtn.addEventListener('click', () => {
+      window.soundManager.playPop();
+      animateYawBy(Math.PI / 3, 380);
+    });
 
     const xrayBtn = document.createElement('button');
     xrayBtn.className = 'xray-toggle-btn';
@@ -1933,7 +1981,7 @@ class MathGameApp {
 
     const spinBtn = document.createElement('button');
     spinBtn.className = 'xray-toggle-btn spin-3d-btn';
-    spinBtn.innerHTML = `🔄 360° 环绕看一圈`;
+    spinBtn.innerHTML = `🔄 360° 环绕`;
     spinBtn.addEventListener('click', () => {
       stopSpinAnim();
       window.soundManager.playPop();
@@ -1962,12 +2010,17 @@ class MathGameApp {
     });
 
     controlsRow.appendChild(counterBadge);
-    controlsRow.appendChild(xrayBtn);
+    controlsRow.appendChild(rotLeftBtn);
+    controlsRow.appendChild(rotRightBtn);
     controlsRow.appendChild(spinBtn);
+    controlsRow.appendChild(xrayBtn);
     blockContainer.appendChild(controlsRow);
     this.questionZoneEl.appendChild(blockContainer);
 
+    // 入场自动做一个优雅的 3D 旋转进场动画，直观提示它是可旋转 3D 模型
+    yaw = defaultYaw - 0.65;
     renderScene();
+    animateYawBy(0.65, 650);
 
     const minC = Math.max(1, totalBlocks - 3);
     const options = this.generateChoices(totalBlocks, minC, totalBlocks + 4, 4);
