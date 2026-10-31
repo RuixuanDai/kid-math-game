@@ -231,6 +231,21 @@ body {
   border: 2px solid #BAE6FD;
 }
 
+.btn-voice-role {
+  background: linear-gradient(135deg, #FCE7F3 0%, #EDE9FE 100%);
+  color: #9D174D;
+  border: 2px solid #F9A8D4;
+  box-shadow: 0 2px 0 #F472B6;
+}
+
+.btn-voice-role:hover {
+  background: linear-gradient(135deg, #FBCFE8 0%, #DDD6FE 100%);
+}
+
+.btn-voice-role:active {
+  box-shadow: 0 0 0 #F472B6;
+}
+
 .badge-tag {
   background: #FF5E7E;
   color: white;

@@ -1,11 +1,13 @@
-// 音频合成与语音助手模块 (纯 Web Audio API + NaturalTTS 自然人声引擎)
+// 音频合成与语音助手模块 (Web Audio API + WebOnlineTTS 在线 AI 真人神经语音 + NaturalTTS 离线兜底)
 class SoundManager {
   constructor() {
     this.ctx = null;
     this.soundEnabled = true;
     this.voiceEnabled = true;
+    this.onlineTts = null;
     this.tts = null;
     this.cachedVoice = null;
+    this.prewarmed = false;
     this.initAudioContext();
     this.initTTS();
   }
@@ -22,12 +24,35 @@ class SoundManager {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
     }
-    if (this.tts && typeof this.tts.unlock === 'function') {
+    if (this.onlineTts && typeof this.onlineTts.unlockAudio === 'function') {
+      this.onlineTts.unlockAudio();
+      if (!this.prewarmed) {
+        this.prewarmed = true;
+        this.onlineTts.prewarm([
+          '太棒啦！答对啦，奖励你一颗小金星！',
+          '好厉害呀！你的小脑袋转得真快！',
+          '别灰心，仔细看一看，再试一次吧！',
+          '语音朗读打开啦！'
+        ]);
+      }
+    } else if (this.tts && typeof this.tts.unlock === 'function') {
       this.tts.unlock();
     }
   }
 
   initTTS() {
+    if (typeof window.OnlineNeuralTTS === 'function') {
+      this.onlineTts = new window.OnlineNeuralTTS({
+        endpoint: '/api/tts',
+        fallbackEndpoint: 'https://kid-math-game.pages.dev/api/tts',
+        rate: '-2%',
+        autoUnlock: true
+      });
+      this.voiceEnabled = !this.onlineTts.muted;
+      this.tts = this.onlineTts.offlineTts || null;
+      return;
+    }
+
     if (typeof window.NaturalTTS === 'function') {
       this.tts = new window.NaturalTTS({
         lang: 'zh-CN',
@@ -44,6 +69,50 @@ class SoundManager {
         this.cachedVoice = this.getBestChineseVoice();
       };
       this.cachedVoice = this.getBestChineseVoice();
+    }
+  }
+
+  getActiveVoiceOption() {
+    if (this.onlineTts && typeof this.onlineTts.getActiveVoiceOption === 'function') {
+      return this.onlineTts.getActiveVoiceOption();
+    }
+    return {
+      id: 'local',
+      emoji: '📱',
+      shortLabel: '离线',
+      name: '本机离线语音',
+      hint: '直接调用系统自带语音库',
+      sample: '当前使用的是本机离线语音。'
+    };
+  }
+
+  cycleVoice() {
+    if (this.onlineTts && typeof this.onlineTts.cycleVoice === 'function') {
+      if (!this.voiceEnabled) {
+        this.setVoiceEnabled(true);
+      }
+      return this.onlineTts.cycleVoice(true);
+    }
+    return this.getActiveVoiceOption();
+  }
+
+  setVoiceEnabled(enabled) {
+    this.voiceEnabled = Boolean(enabled);
+    if (this.onlineTts && typeof this.onlineTts.setMuted === 'function') {
+      this.onlineTts.setMuted(!this.voiceEnabled);
+    } else if (!this.voiceEnabled && this.tts) {
+      this.tts.stop();
+    }
+    return this.voiceEnabled;
+  }
+
+  stopSpeaking() {
+    if (this.onlineTts && typeof this.onlineTts.stop === 'function') {
+      this.onlineTts.stop();
+    } else if (this.tts && typeof this.tts.stop === 'function') {
+      this.tts.stop();
+    } else if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
     }
   }
 
@@ -342,6 +411,10 @@ class SoundManager {
       .replace(/(\d{1,2}):30/g, '$1点半')
       .replace(/(\d{1,2}):(\d{2})/g, '$1点$2分');
 
+    if (this.onlineTts && typeof this.onlineTts.cleanText === 'function') {
+      return this.onlineTts.cleanText(normalized);
+    }
+
     if (this.tts) {
       return this.tts.cleanText(normalized);
     }
@@ -361,11 +434,16 @@ class SoundManager {
       .trim();
   }
 
-  // 语音播报
-  speak(text) {
+  // 语音播报 (优先调用在线 AI 真人神经语音 WebOnlineTTS，断网或离线音色自动无缝回退 NaturalTTS)
+  speak(text, voiceOverride) {
     if (!this.voiceEnabled) return;
     const polished = this.cleanSpeechText(text);
     if (!polished) return;
+
+    if (this.onlineTts) {
+      this.onlineTts.speak(polished, voiceOverride);
+      return;
+    }
 
     if (this.tts) {
       this.tts.speak(polished);

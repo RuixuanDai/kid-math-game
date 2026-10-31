@@ -241,7 +241,7 @@ class MathGameApp {
       });
     }
 
-    // 声音与全屏
+    // 声音、AI 在线语音角色切换与全屏
     const soundToggle = document.getElementById('sound-toggle');
     if (soundToggle) {
       soundToggle.addEventListener('click', () => {
@@ -251,14 +251,41 @@ class MathGameApp {
       });
     }
 
+    const voiceRoleBtn = document.getElementById('voice-role-btn');
     const voiceToggle = document.getElementById('voice-toggle');
-    if (voiceToggle) {
-      voiceToggle.addEventListener('click', () => {
-        window.soundManager.voiceEnabled = !window.soundManager.voiceEnabled;
+
+    const syncVoiceUI = () => {
+      const opt = window.soundManager.getActiveVoiceOption();
+      if (voiceRoleBtn && opt) {
+        voiceRoleBtn.textContent = `${opt.emoji} ${opt.shortLabel}`;
+        voiceRoleBtn.title = `当前语音伙伴：${opt.name}（${opt.hint}）· 点击切换`;
+      }
+      if (voiceToggle) {
         voiceToggle.textContent = window.soundManager.voiceEnabled ? '🗣️ 读题开' : '🤐 读题关';
         voiceToggle.classList.toggle('off', !window.soundManager.voiceEnabled);
-        if (!window.soundManager.voiceEnabled && window.soundManager.tts) {
-          window.soundManager.tts.stop();
+      }
+    };
+    syncVoiceUI();
+
+    if (voiceRoleBtn) {
+      voiceRoleBtn.addEventListener('click', () => {
+        window.soundManager.playPop();
+        const nextOpt = window.soundManager.cycleVoice();
+        syncVoiceUI();
+        if (nextOpt) {
+          this.setMascot(`已切换语音伙伴：${nextOpt.emoji} ${nextOpt.name}！`);
+        }
+      });
+    }
+
+    if (voiceToggle) {
+      voiceToggle.addEventListener('click', () => {
+        const nowEnabled = window.soundManager.setVoiceEnabled(!window.soundManager.voiceEnabled);
+        syncVoiceUI();
+        if (nowEnabled) {
+          window.soundManager.speak('语音朗读打开啦！');
+        } else {
+          window.soundManager.stopSpeaking();
         }
       });
     }

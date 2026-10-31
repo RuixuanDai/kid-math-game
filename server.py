@@ -1,7 +1,12 @@
 import os
+import re
 import sys
+import json
 import socket
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+import hashlib
+import urllib.parse
+import urllib.request
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 # 兼容 Windows 控制台 UTF-8 输出
 if sys.platform == 'win32':
@@ -13,6 +18,152 @@ if sys.platform == 'win32':
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE_DIR)
+
+TTS_CACHE_DIR = os.path.join(BASE_DIR, '.local-data', 'tts-cache')
+os.makedirs(TTS_CACHE_DIR, exist_ok=True)
+
+ALLOWED_VOICES = {
+    'zh-CN-XiaoyiNeural',
+    'zh-CN-XiaoxiaoNeural',
+    'zh-CN-YunxiaNeural',
+    'zh-CN-liaoning-XiaobeiNeural',
+    'zh-CN-YunjianNeural',
+    'zh-CN-YunxiNeural',
+    'zh-CN-shaanxi-XiaoniNeural',
+    'en-US-AnaNeural',
+    'en-US-JennyNeural',
+    'en-US-GuyNeural',
+}
+DEFAULT_VOICE = 'zh-CN-XiaoyiNeural'
+CLOUDFLARE_TTS_FALLBACK = 'https://kid-math-game.pages.dev/api/tts'
+
+
+def load_azure_speech_credentials():
+    """从环境变量或本地 .env.db.local / .env.local 自动读取共享的 Azure Speech 免费层密钥"""
+    key = os.environ.get('AZURE_SPEECH_KEY', '').strip()
+    region = os.environ.get('AZURE_SPEECH_REGION', '').strip()
+    if key and region:
+        return key, region
+
+    candidate_files = [
+        os.path.join(BASE_DIR, '.env.db.local'),
+        os.path.join(BASE_DIR, '.env.local'),
+        os.path.join(BASE_DIR, '.env'),
+        os.path.abspath(os.path.join(BASE_DIR, '..', '..', 'kid_incentive', 'opus', '.env.db.local')),
+    ]
+    for path in candidate_files:
+        if os.path.isfile(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith('#') or '=' not in line:
+                            continue
+                        k, v = line.split('=', 1)
+                        k = k.strip()
+                        v = v.strip().strip('"').strip("'")
+                        if k == 'AZURE_SPEECH_KEY' and not key:
+                            key = v
+                        elif k == 'AZURE_SPEECH_REGION' and not region:
+                            region = v
+            except Exception:
+                pass
+        if key and region:
+            break
+    return key, region
+
+
+AZURE_KEY, AZURE_REGION = load_azure_speech_credentials()
+
+
+def clean_tts_text(raw: str) -> str:
+    if not raw:
+        return ''
+    text = re.sub(r'(\d{1,2}):00', r'\1点整', raw)
+    text = re.sub(r'(\d{1,2}):30', r'\1点半', text)
+    text = re.sub(r'(\d{1,2}):(\d{2})', r'\1点\2分', text)
+    text = text.replace('+', ' 加 ').replace('−', ' 减 ').replace('-', ' 减 ')
+    text = text.replace('×', ' 乘 ').replace('*', ' 乘 ').replace('÷', ' 除以 ').replace('=', ' 等于 ')
+    text = re.sub(r'[✓✔✕✖✗▶◀▲▼•·|]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text[:320]
+
+
+def escape_xml(text: str) -> str:
+    return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+
+def synthesize_tts_mp3(voice: str, rate: str, cleaned_text: str) -> tuple[bytes, str]:
+    """合成或从本地磁盘缓存读取 MP3，返回 (mp3_bytes, provider_name)"""
+    cache_key = hashlib.sha256(f"v1|{voice}|{rate}|{cleaned_text}".encode('utf-8')).hexdigest()
+    cache_path = os.path.join(TTS_CACHE_DIR, f"{cache_key}.mp3")
+
+    if os.path.isfile(cache_path):
+        try:
+            with open(cache_path, 'rb') as f:
+                data = f.read()
+            if len(data) >= 128:
+                return data, 'local-disk-cache'
+        except Exception:
+            pass
+
+    mp3_data = None
+    provider = 'unknown'
+
+    # 1. 优先使用本机配置的 Azure AI Speech REST API (Free F0)
+    if AZURE_KEY and AZURE_REGION:
+        xml_lang = 'en-US' if voice.startswith('en-') else 'zh-CN'
+        endpoint = f"https://{AZURE_REGION.lower()}.tts.speech.microsoft.com/cognitiveservices/v1"
+        ssml = (
+            f"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' "
+            f"xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{xml_lang}'>"
+            f"<voice name='{voice}'><prosody pitch='+0Hz' rate='{rate}' volume='+0%'>"
+            f"{escape_xml(cleaned_text)}</prosody></voice></speak>"
+        ).encode('utf-8')
+        req = urllib.request.Request(
+            endpoint,
+            data=ssml,
+            method='POST',
+            headers={
+                'Ocp-Apim-Subscription-Key': AZURE_KEY,
+                'Content-Type': 'application/ssml+xml',
+                'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
+                'User-Agent': 'MathGameLocalServer/1.0',
+            },
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = resp.read()
+            if len(data) >= 128:
+                mp3_data = data
+                provider = 'azure-neural-local'
+
+    # 2. 若未配置本地密钥，自动代理至线上 Cloudflare Pages 边缘函数并缓存到本地磁盘
+    if not mp3_data:
+        qs = urllib.parse.urlencode({'voice': voice, 'rate': rate, 'text': cleaned_text})
+        req = urllib.request.Request(
+            f"{CLOUDFLARE_TTS_FALLBACK}?{qs}",
+            method='GET',
+            headers={'User-Agent': 'MathGameLocalServer/1.0'},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = resp.read()
+            if len(data) >= 128:
+                mp3_data = data
+                provider = 'cloudflare-edge-proxy'
+
+    if not mp3_data or len(mp3_data) < 128:
+        raise RuntimeError('Empty TTS audio bytes')
+
+    try:
+        tmp_path = f"{cache_path}.{os.getpid()}.tmp"
+        with open(tmp_path, 'wb') as f:
+            f.write(mp3_data)
+        os.replace(tmp_path, cache_path)
+    except Exception:
+        pass
+
+    return mp3_data, provider
+
 
 def get_local_ip():
     """获取本机局域网 IP"""
@@ -26,6 +177,7 @@ def get_local_ip():
         s.close()
     return ip
 
+
 def find_available_port(start_port=8088):
     for port in [start_port, 8089, 8000, 3000, 5000, 8888]:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -34,16 +186,18 @@ def find_available_port(start_port=8088):
                 return port
     return start_port
 
+
 class CustomHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
-        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        self.send_header('Pragma', 'no-cache')
-        self.send_header('Expires', '0')
+        if not self.path.startswith('/api/tts'):
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Expires', '0')
         self.send_header('Access-Control-Allow-Origin', '*')
         super().end_headers()
 
     def guess_type(self, path):
-        if path.endswith('.js'):
+        if path.endswith('.js') or path.endswith('.mjs'):
             return 'application/javascript; charset=utf-8'
         if path.endswith('.css'):
             return 'text/css; charset=utf-8'
@@ -54,7 +208,47 @@ class CustomHandler(SimpleHTTPRequestHandler):
         return super().guess_type(path)
 
     def do_GET(self):
-        if self.path == '/qr':
+        parsed = urllib.parse.urlparse(self.path)
+
+        # 在线 AI 神经网络语音接口 (/api/tts)
+        if parsed.path == '/api/tts':
+            qs = urllib.parse.parse_qs(parsed.query)
+            raw_text = (qs.get('text') or [''])[0]
+            cleaned = clean_tts_text(raw_text)
+            if not cleaned:
+                body = json.dumps({'error': 'Empty text'}).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+
+            req_voice = (qs.get('voice') or [DEFAULT_VOICE])[0]
+            voice = req_voice if req_voice in ALLOWED_VOICES else DEFAULT_VOICE
+            req_rate = (qs.get('rate') or ['-2%'])[0]
+            rate = req_rate if re.match(r'^[+-]?\d{1,2}%$', req_rate) else '-2%'
+
+            try:
+                mp3_bytes, provider = synthesize_tts_mp3(voice, rate, cleaned)
+                self.send_response(200)
+                self.send_header('Content-Type', 'audio/mpeg')
+                self.send_header('Content-Length', str(len(mp3_bytes)))
+                self.send_header('Cache-Control', 'public, max-age=31536000, immutable')
+                self.send_header('X-TTS-Provider', provider)
+                self.end_headers()
+                self.wfile.write(mp3_bytes)
+            except Exception as e:
+                body = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(502)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Cache-Control', 'no-store')
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            return
+
+        if parsed.path == '/qr':
             self.send_response(200)
             self.send_header('Content-type', 'text/html; charset=utf-8')
             self.end_headers()
@@ -96,16 +290,19 @@ class CustomHandler(SimpleHTTPRequestHandler):
 
         return super().do_GET()
 
+
 def main():
     port = find_available_port(8088)
     local_ip = get_local_ip()
 
     server_address = ('0.0.0.0', port)
-    httpd = HTTPServer(server_address, CustomHandler)
+    httpd = ThreadingHTTPServer(server_address, CustomHandler)
 
+    tts_mode = f"Azure AI Speech ({AZURE_REGION})" if (AZURE_KEY and AZURE_REGION) else "Cloudflare Edge Proxy"
     banner = f"""
 =============================================================================
   [童趣数学小王国] iPad 局域网服务器已就绪！
+  [在线语音引擎] Web-Online-TTS 已挂载 (/api/tts -> {tts_mode} + 本地磁盘缓存)
 =============================================================================
 
   【iPad 打开方法】：
@@ -135,6 +332,7 @@ def main():
     except KeyboardInterrupt:
         print("\n服务器已安全停止。")
         httpd.server_close()
+
 
 if __name__ == '__main__':
     main()

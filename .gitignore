@@ -1,9 +1,12 @@
-# Python / Node
+# Python / Node / TTS Cache
 __pycache__/
 *.py[cod]
 node_modules/
 dist/
 .env
+.env.*
+.local-data/
+.wrangler/
 
 # System & IDE
 .DS_Store
