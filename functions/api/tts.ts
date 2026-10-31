@@ -1,37 +1,19 @@
 /**
- * Cloudflare Pages Function: GET /api/tts?voice=zh-CN-XiaoyiNeural&rate=-2%&text=...
+ * Cloudflare Pages Function: GET /api/tts
  *
- * 通用在线 AI 神经网络真人语音接口（兼容 Cloudflare Pages / Workers 及跨域静态站点调用）：
- * 1. 优先调用微软官方 Azure AI Speech REST API（需在 Cloudflare Pages Secrets 配置 AZURE_SPEECH_KEY 与 AZURE_SPEECH_REGION，
- *    F0 免费层每月 50 万神经字符额度，支持云函数机房 IP 直连，彻底规避消费端 IP 封禁）；
- * 2. 若未配置 Azure 密钥（如本地 wrangler pages dev 调试），自动回退至 Edge ReadAloud WebSocket 通道（内置纯 WebCrypto Sec-MS-GEC 签名）；
- * 3. 利用 Cloudflare 全球边缘缓存（caches.default）将同一句朗读永久缓存在就近节点（1 年 immutable），同一句话全网只消耗一次合成额度；
- * 4. 内置 CORS 支持（Access-Control-Allow-Origin: *），允许 GitHub Pages 等静态托管域名直接跨域获取神经语音；
- * 5. 若上游连接超时或受限，快速返回 502 JSON（绝不返回 SPA index.html），使前端平滑回退到本机 Web Speech（web-natural-tts）。
+ * 专属「👩 晓晓 · 温柔姐姐」(zh-CN-XiaoxiaoNeural) 在线 AI 神经网络语音接口（含 5 层防盗刷安全网关）：
+ * 1. Origin / Referer 严格白名单：仅允许本项目的 Cloudflare Pages、GitHub Pages (ruixuandai.github.io) 与本地局域网调试域名访问，拒绝一切第三方跨域盗链与无头爬虫；
+ * 2. 动态时间戳签名校验 (ts + sig + X-Requested-With)：每次请求必须携带 ±300 秒内的时间戳与 SHA-256 签名，防止 URL 伪造与重放攻击；
+ * 3. 单一音色锁定与输入长度硬上限：仅允许 `zh-CN-XiaoxiaoNeural` 音色，单次文本严格限制 <= 80 字符且必须包含中文或数字，防止恶意长文本消耗字符额度；
+ * 4. Cloudflare 全球边缘永久缓存 (caches.default, 1 年 immutable)：命中缓存的句子完全不消耗 Azure 额度；
+ * 5. 单 IP 缓存未命中限流器 (Per-IP Cache-Miss Rate Limiter)：仅对“未命中缓存、需实际调用 Azure 合成”的新句子按客户端 IP 限流（每分钟最多 20 次新句合成，每小时最多 150 次），彻底杜绝黑客脚本刷爆 Free F0 免费额度。
  */
 
-const ALLOWED_VOICES = new Set([
-  // 中文精选自然神经音色
-  "zh-CN-XiaoyiNeural",           // 👧 晓伊 · 甜美童趣（绘本/儿童/游戏默认推荐）
-  "zh-CN-XiaoxiaoNeural",         // 👩 晓晓 · 温柔自然女声（通用播报/助手推荐）
-  "zh-CN-YunxiaNeural",           // 👦 云夏 · 元气阳光少年
-  "zh-CN-liaoning-XiaobeiNeural", // 🎭 晓北 · 亲切幽默东北腔
-  "zh-CN-YunjianNeural",          // 🦁 云健 · 温暖浑厚鼓励男声
-  "zh-CN-YunxiNeural",            // 🧑 云希 · 清朗故事青年男声
-  "zh-CN-shaanxi-XiaoniNeural",   // 🏮 晓妮 · 俏皮陕西腔女声
-  // 英文精选自然神经音色
-  "en-US-AnaNeural",              // 👧 Ana · 英文纯真童声
-  "en-US-JennyNeural",            // 👩 Jenny · 英文亲切女声
-  "en-US-GuyNeural",              // 🧑 Guy · 英文自然男声
-]);
-const DEFAULT_VOICE = "zh-CN-XiaoyiNeural";
-
-const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Expose-Headers": "X-TTS-Provider",
-};
+const LOCKED_VOICE = "zh-CN-XiaoxiaoNeural";
+const TTS_CLIENT_SECRET = "kmg-tts-2026-guard-v1";
+const MAX_TEXT_LEN = 80;
+const MAX_MISS_PER_MINUTE = 20;
+const MAX_MISS_PER_HOUR = 150;
 
 const TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
 const EDGE_HTTPS_WS_URL = "https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
@@ -42,6 +24,9 @@ const SWAP_FIRST_WORD = { swappedWord: 0xef0569fb, swappedSum: 0x76f50f34, swapp
 const SWAP_SECOND_WORD = { swappedWord: 0xc31713db, swappedSum: 0x1881ce3c, swappedProduct: 0x35bd1ec9 };
 const MIX_FIRST_WORD = [0xcf98b111, 0x87085b9f, 0x12ceb96d, 0x257e1d83];
 const MIX_SECOND_WORD = [0xa27416f5, 0xd38396ff, 0x7c932b89, 0xbfa49f69];
+
+// 内存级 IP 限流表（配合 Edge Cache 双重限流）
+const ipRateMap = new Map<string, { minBucket: number; minCount: number; hourBucket: number; hourCount: number }>();
 
 export interface PagesEnv {
   AZURE_SPEECH_KEY?: string;
@@ -54,27 +39,136 @@ export interface PagesContext {
   waitUntil(promise: Promise<unknown>): void;
 }
 
-export async function onRequestOptions(): Promise<Response> {
+function isAllowedOriginUrl(rawUrl: string): boolean {
+  if (!rawUrl) return false;
+  try {
+    const parsed = new URL(rawUrl);
+    const host = parsed.hostname.toLowerCase();
+    return (
+      host === "kid-math-game.pages.dev" ||
+      host.endsWith(".kid-math-game.pages.dev") ||
+      host === "ruixuandai.github.io" ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.startsWith("192.168.") ||
+      host.startsWith("10.")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function buildCorsHeaders(request: Request): Record<string, string> {
+  const origin = request.headers.get("Origin") ?? "";
+  const allowedOrigin = isAllowedOriginUrl(origin) ? origin : "https://kid-math-game.pages.dev";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-Requested-With",
+    "Access-Control-Expose-Headers": "X-TTS-Provider",
+    Vary: "Origin",
+  };
+}
+
+export async function onRequestOptions(context: PagesContext): Promise<Response> {
   return new Response(null, {
     status: 204,
-    headers: CORS_HEADERS,
+    headers: buildCorsHeaders(context.request),
   });
 }
 
-export async function onRequestGet(context: PagesContext): Promise<Response> {
-  const url = new URL(context.request.url);
-  const rawText = url.searchParams.get("text") ?? "";
-  const cleaned = cleanTtsInput(rawText);
-  if (!cleaned) {
-    return jsonError(400, "Empty text");
+async function verifySignature(
+  ts: string,
+  sig: string,
+  voice: string,
+  rate: string,
+  cleanedText: string,
+): Promise<boolean> {
+  if (!ts || !sig) return false;
+  const tsNum = Number(ts);
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (!Number.isFinite(tsNum) || Math.abs(nowSec - tsNum) > 300) {
+    return false;
+  }
+  const raw = `${ts}|${voice}|${rate}|${cleanedText}|${TTS_CLIENT_SECRET}`;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  const expected = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
+  return sig === expected;
+}
+
+function checkAndIncrementIpQuota(ip: string): boolean {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const minBucket = Math.floor(nowSec / 60);
+  const hourBucket = Math.floor(nowSec / 3600);
+
+  let record = ipRateMap.get(ip);
+  if (!record) {
+    record = { minBucket, minCount: 0, hourBucket, hourCount: 0 };
+    if (ipRateMap.size > 2000) {
+      const firstKey = ipRateMap.keys().next().value;
+      if (firstKey) ipRateMap.delete(firstKey);
+    }
+    ipRateMap.set(ip, record);
   }
 
-  const reqVoice = url.searchParams.get("voice") ?? DEFAULT_VOICE;
-  const voice = ALLOWED_VOICES.has(reqVoice) ? reqVoice : DEFAULT_VOICE;
+  if (record.minBucket !== minBucket) {
+    record.minBucket = minBucket;
+    record.minCount = 0;
+  }
+  if (record.hourBucket !== hourBucket) {
+    record.hourBucket = hourBucket;
+    record.hourCount = 0;
+  }
+
+  if (record.minCount >= MAX_MISS_PER_MINUTE || record.hourCount >= MAX_MISS_PER_HOUR) {
+    return false;
+  }
+
+  record.minCount += 1;
+  record.hourCount += 1;
+  return true;
+}
+
+export async function onRequestGet(context: PagesContext): Promise<Response> {
+  const { request } = context;
+  const corsHeaders = buildCorsHeaders(request);
+
+  // 1. 校验 Origin / Referer 白名单与客户端自定义请求头，拦截外部盗链与脚本直刷
+  const origin = request.headers.get("Origin") ?? "";
+  const referer = request.headers.get("Referer") ?? "";
+  const reqWith = request.headers.get("X-Requested-With") ?? "";
+
+  if (!isAllowedOriginUrl(origin) && !isAllowedOriginUrl(referer)) {
+    return jsonError(403, "Forbidden: unauthorized origin", corsHeaders);
+  }
+  if (reqWith !== "KidMathGame-TTS/1.0") {
+    return jsonError(403, "Forbidden: invalid client header", corsHeaders);
+  }
+
+  // 2. 校验与清洗文本（限制 <= 80 字符，且必须含中文或数字）
+  const url = new URL(request.url);
+  const rawText = url.searchParams.get("text") ?? "";
+  const cleaned = cleanTtsInput(rawText);
+  if (!cleaned || !/[0-9\u4e00-\u9fa5]/.test(cleaned)) {
+    return jsonError(400, "Invalid or empty text", corsHeaders);
+  }
+
+  // 3. 强制锁定唯一音色 zh-CN-XiaoxiaoNeural（晓晓）
+  const voice = LOCKED_VOICE;
   const reqRate = url.searchParams.get("rate") ?? "-2%";
   const rate = /^[+-]?\d{1,2}%$/.test(reqRate) ? reqRate : "-2%";
 
-  // 归一化缓存键，利用 Cloudflare 全球边缘节点缓存合成结果
+  // 4. 校验时间戳与防篡改签名 (ts + sig)
+  const ts = url.searchParams.get("ts") ?? "";
+  const sig = url.searchParams.get("sig") ?? "";
+  const validSig = await verifySignature(ts, sig, voice, rate, cleaned);
+  if (!validSig) {
+    return jsonError(403, "Forbidden: invalid or expired signature", corsHeaders);
+  }
+
+  // 5. 优先查询 Cloudflare 全球边缘节点缓存（命中缓存不消耗任何 Azure 额度）
   const cacheUrl = new URL("/__tts_cache_v1", url.origin);
   cacheUrl.searchParams.set("v", voice);
   cacheUrl.searchParams.set("r", rate);
@@ -86,7 +180,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     const hit = await edgeCache.match(cacheKey);
     if (hit) {
       const headers = new Headers(hit.headers);
-      for (const [k, v] of Object.entries(CORS_HEADERS)) {
+      for (const [k, v] of Object.entries(corsHeaders)) {
         headers.set(k, v);
       }
       return new Response(hit.body, {
@@ -94,6 +188,12 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
         headers,
       });
     }
+  }
+
+  // 6. 缓存未命中时，按客户端真实 IP 执行严格限流（防止恶意构造随机文本耗尽月度免费额度）
+  const clientIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  if (!checkAndIncrementIpQuota(clientIp)) {
+    return jsonError(429, "Rate limit exceeded for new speech synthesis", corsHeaders);
   }
 
   const azureKey = context.env?.AZURE_SPEECH_KEY?.trim() ?? "";
@@ -108,7 +208,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     const response = new Response(body, {
       status: 200,
       headers: {
-        ...CORS_HEADERS,
+        ...corsHeaders,
         "Content-Type": "audio/mpeg",
         "Content-Length": String(mp3.byteLength),
         "Cache-Control": "public, max-age=31536000, immutable",
@@ -120,7 +220,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     }
     return response;
   } catch (err) {
-    return jsonError(502, err instanceof Error ? err.message : String(err));
+    return jsonError(502, err instanceof Error ? err.message : String(err), corsHeaders);
   }
 }
 
@@ -136,10 +236,9 @@ async function synthesizeAzureMp3(
     throw new Error("Invalid AZURE_SPEECH_REGION format");
   }
 
-  const xmlLang = voice.startsWith("en-") ? "en-US" : "zh-CN";
   const endpoint = `https://${cleanRegion}.tts.speech.microsoft.com/cognitiveservices/v1`;
   const ssml =
-    `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='${xmlLang}'>` +
+    `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='zh-CN'>` +
     `<voice name='${voice}'><prosody pitch='+0Hz' rate='${rate}' volume='+0%'>${escapeXml(text)}</prosody></voice>` +
     `</speak>`;
 
@@ -172,11 +271,11 @@ async function synthesizeAzureMp3(
   }
 }
 
-function jsonError(status: number, error: string): Response {
+function jsonError(status: number, error: string, corsHeaders: Record<string, string>): Response {
   return new Response(JSON.stringify({ error }), {
     status,
     headers: {
-      ...CORS_HEADERS,
+      ...corsHeaders,
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
     },
@@ -199,7 +298,7 @@ function cleanTtsInput(raw: string): string {
     .replace(/(\d+)\s*\/\s*(\d+)/g, "$2个里完成了$1个")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 320);
+    .slice(0, MAX_TEXT_LEN);
 }
 
 function escapeXml(text: string): string {
@@ -234,7 +333,6 @@ async function synthesizeEdgeMp3(voice: string, text: string, rate: string): Pro
   }
   (ws as WebSocket & { accept(): void }).accept();
 
-  const xmlLang = voice.startsWith("en-") ? "en-US" : "zh-CN";
   const reqId = randomHex(16);
   const configFrame =
     "Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n" +
@@ -250,7 +348,7 @@ async function synthesizeEdgeMp3(voice: string, text: string, rate: string): Pro
     });
 
   const ssml =
-    `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${xmlLang}'>` +
+    `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'>` +
     `<voice name='${voice}'><prosody pitch='+0Hz' rate='${rate}' volume='+0%'>${escapeXml(text)}</prosody></voice>` +
     `</speak>`;
   const ssmlFrame = `X-RequestId:${reqId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`;

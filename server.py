@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import time
 import json
 import socket
 import hashlib
@@ -23,18 +24,10 @@ TTS_CACHE_DIR = os.path.join(BASE_DIR, '.local-data', 'tts-cache')
 os.makedirs(TTS_CACHE_DIR, exist_ok=True)
 
 ALLOWED_VOICES = {
-    'zh-CN-XiaoyiNeural',
     'zh-CN-XiaoxiaoNeural',
-    'zh-CN-YunxiaNeural',
-    'zh-CN-liaoning-XiaobeiNeural',
-    'zh-CN-YunjianNeural',
-    'zh-CN-YunxiNeural',
-    'zh-CN-shaanxi-XiaoniNeural',
-    'en-US-AnaNeural',
-    'en-US-JennyNeural',
-    'en-US-GuyNeural',
 }
-DEFAULT_VOICE = 'zh-CN-XiaoyiNeural'
+DEFAULT_VOICE = 'zh-CN-XiaoxiaoNeural'
+TTS_CLIENT_SECRET = 'kmg-tts-2026-guard-v1'
 CLOUDFLARE_TTS_FALLBACK = 'https://kid-math-game.pages.dev/api/tts'
 
 
@@ -86,7 +79,7 @@ def clean_tts_text(raw: str) -> str:
     text = text.replace('×', ' 乘 ').replace('*', ' 乘 ').replace('÷', ' 除以 ').replace('=', ' 等于 ')
     text = re.sub(r'[✓✔✕✖✗▶◀▲▼•·|]', ' ', text)
     text = re.sub(r'\s+', ' ', text).strip()
-    return text[:320]
+    return text[:80]
 
 
 def escape_xml(text: str) -> str:
@@ -137,13 +130,20 @@ def synthesize_tts_mp3(voice: str, rate: str, cleaned_text: str) -> tuple[bytes,
                 mp3_data = data
                 provider = 'azure-neural-local'
 
-    # 2. 若未配置本地密钥，自动代理至线上 Cloudflare Pages 边缘函数并缓存到本地磁盘
+    # 2. 若未配置本地密钥，自动带签名代理至线上 Cloudflare Pages 边缘函数并缓存到本地磁盘
     if not mp3_data:
-        qs = urllib.parse.urlencode({'voice': voice, 'rate': rate, 'text': cleaned_text})
+        ts = str(int(time.time()))
+        raw_sig = f"{ts}|{voice}|{rate}|{cleaned_text}|{TTS_CLIENT_SECRET}"
+        sig = hashlib.sha256(raw_sig.encode('utf-8')).hexdigest()[:32]
+        qs = urllib.parse.urlencode({'voice': voice, 'rate': rate, 'text': cleaned_text, 'ts': ts, 'sig': sig})
         req = urllib.request.Request(
             f"{CLOUDFLARE_TTS_FALLBACK}?{qs}",
             method='GET',
-            headers={'User-Agent': 'MathGameLocalServer/1.0'},
+            headers={
+                'User-Agent': 'MathGameLocalServer/1.0',
+                'Origin': 'http://localhost:8088',
+                'X-Requested-With': 'KidMathGame-TTS/1.0',
+            },
         )
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = resp.read()

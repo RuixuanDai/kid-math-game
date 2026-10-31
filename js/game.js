@@ -251,32 +251,14 @@ class MathGameApp {
       });
     }
 
-    const voiceRoleBtn = document.getElementById('voice-role-btn');
     const voiceToggle = document.getElementById('voice-toggle');
-
     const syncVoiceUI = () => {
-      const opt = window.soundManager.getActiveVoiceOption();
-      if (voiceRoleBtn && opt) {
-        voiceRoleBtn.textContent = `${opt.emoji} ${opt.shortLabel}`;
-        voiceRoleBtn.title = `当前语音伙伴：${opt.name}（${opt.hint}）· 点击切换`;
-      }
       if (voiceToggle) {
         voiceToggle.textContent = window.soundManager.voiceEnabled ? '🗣️ 读题开' : '🤐 读题关';
         voiceToggle.classList.toggle('off', !window.soundManager.voiceEnabled);
       }
     };
     syncVoiceUI();
-
-    if (voiceRoleBtn) {
-      voiceRoleBtn.addEventListener('click', () => {
-        window.soundManager.playPop();
-        const nextOpt = window.soundManager.cycleVoice();
-        syncVoiceUI();
-        if (nextOpt) {
-          this.setMascot(`已切换语音伙伴：${nextOpt.emoji} ${nextOpt.name}！`);
-        }
-      });
-    }
 
     if (voiceToggle) {
       voiceToggle.addEventListener('click', () => {
