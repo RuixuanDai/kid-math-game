@@ -135,16 +135,12 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
   const { request } = context;
   const corsHeaders = buildCorsHeaders(request);
 
-  // 1. 校验 Origin / Referer 白名单与客户端自定义请求头，拦截外部盗链与脚本直刷
+  // 1. 校验 Origin / Referer 白名单，拦截外部网站盗链与无头脚本直刷
   const origin = request.headers.get("Origin") ?? "";
   const referer = request.headers.get("Referer") ?? "";
-  const reqWith = request.headers.get("X-Requested-With") ?? "";
 
   if (!isAllowedOriginUrl(origin) && !isAllowedOriginUrl(referer)) {
     return jsonError(403, "Forbidden: unauthorized origin", corsHeaders);
-  }
-  if (reqWith !== "KidMathGame-TTS/1.0") {
-    return jsonError(403, "Forbidden: invalid client header", corsHeaders);
   }
 
   // 2. 校验与清洗文本（限制 <= 80 字符，且必须含中文或数字）
