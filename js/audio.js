@@ -29,10 +29,14 @@ class SoundManager {
       if (!this.prewarmed) {
         this.prewarmed = true;
         this.onlineTts.prewarm([
-          '太棒啦！答对啦，奖励你一颗小金星！',
-          '好厉害呀！你的小脑袋转得真快！',
-          '别灰心，仔细看一看，再试一次吧！',
-          '语音朗读打开啦！'
+          '太棒啦！你真聪明！',
+          '哇！完全正确，思维真敏捷！',
+          '算得又快又准，给你大拇指！',
+          '太厉害啦，难题都被你攻克了！',
+          '答对啦！离扭蛋又近一步了！',
+          '差一点点哦，再仔细算算看！',
+          '没关系，再看一眼题目，你一定行！',
+          '不要着急，深呼吸再试一次吧！'
         ]);
       }
     } else if (this.tts && typeof this.tts.unlock === 'function') {
@@ -434,42 +438,45 @@ class SoundManager {
       .trim();
   }
 
-  // 语音播报 (优先调用在线 AI 真人神经语音 WebOnlineTTS，断网或离线音色自动无缝回退 NaturalTTS)
+  // 语音播报 (优先调用在线 AI 真人神经语音 WebOnlineTTS，断网或离线音色自动无缝回退 NaturalTTS，返回 Promise 以便等待播报结束)
   speak(text, voiceOverride) {
-    if (!this.voiceEnabled) return;
+    if (!this.voiceEnabled) return Promise.resolve();
     const polished = this.cleanSpeechText(text);
-    if (!polished) return;
+    if (!polished) return Promise.resolve();
 
     if (this.onlineTts) {
-      this.onlineTts.speak(polished, voiceOverride);
-      return;
+      return Promise.resolve(this.onlineTts.speak(polished, voiceOverride)).catch(() => {});
     }
 
     if (this.tts) {
-      this.tts.speak(polished);
-      return;
+      return Promise.resolve(this.tts.speak(polished)).catch(() => {});
     }
 
-    if (!('speechSynthesis' in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(polished);
-      utterance.lang = 'zh-CN';
-      utterance.rate = 0.92;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
+    if (!('speechSynthesis' in window)) return Promise.resolve();
+    return new Promise((resolve) => {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(polished);
+        utterance.lang = 'zh-CN';
+        utterance.rate = 0.92;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
 
-      if (!this.cachedVoice) {
-        this.cachedVoice = this.getBestChineseVoice();
-      }
-      if (this.cachedVoice) {
-        utterance.voice = this.cachedVoice;
-      }
+        if (!this.cachedVoice) {
+          this.cachedVoice = this.getBestChineseVoice();
+        }
+        if (this.cachedVoice) {
+          utterance.voice = this.cachedVoice;
+        }
 
-      window.speechSynthesis.speak(utterance);
-    } catch (e) {
-      console.warn("Speech error:", e);
-    }
+        utterance.onend = () => resolve();
+        utterance.onerror = () => resolve();
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.warn("Speech error:", e);
+        resolve();
+      }
+    });
   }
 }
 

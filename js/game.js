@@ -17,6 +17,8 @@ class MathGameApp {
     this.countedItems = new Set();
     this.eggCost = 3;
     this.nextQuestionTimer = null;
+    this.questionSpeakTimer = null;
+    this.transitionSeq = 0;
     this.lastClockMinute = null;
 
     // 60秒极速挑战模式状态
@@ -78,9 +80,14 @@ class MathGameApp {
   }
 
   clearPendingTimers() {
+    this.transitionSeq += 1;
     if (this.nextQuestionTimer) {
       clearTimeout(this.nextQuestionTimer);
       this.nextQuestionTimer = null;
+    }
+    if (this.questionSpeakTimer) {
+      clearTimeout(this.questionSpeakTimer);
+      this.questionSpeakTimer = null;
     }
     if (typeof this.blocksCleanup === 'function') {
       this.blocksCleanup();
@@ -491,8 +498,9 @@ class MathGameApp {
     }
 
     if (!this.speedrunActive && this.currentQuestion && this.currentQuestion.audioPrompt) {
-      setTimeout(() => {
-        if (!this.speedrunActive && this.currentQuestion) {
+      const qSeq = this.transitionSeq;
+      this.questionSpeakTimer = setTimeout(() => {
+        if (!this.speedrunActive && this.currentQuestion && this.transitionSeq === qSeq) {
           window.soundManager.speak(this.currentQuestion.audioPrompt);
         }
       }, 260);
@@ -2342,25 +2350,50 @@ class MathGameApp {
           : (minute === 30
               ? `太棒啦！时针走过 ${hour}，分针指着 6，就是 ${hour} 点半！`
               : `完全正确！现在正是 ${hour} 点 ${minute} 分！`);
+      } else if (this.streak > 1 && this.streak % 3 === 0) {
+        window.soundManager.playFanfare();
+        praise = `太神奇了！连续答对 ${this.streak} 题了！快去扭蛋机看看吧！🎊`;
+      }
+
+      if (qType === 'clock' && this.streak > 1 && this.streak % 3 === 0) {
+        window.soundManager.playFanfare();
       }
 
       this.setMascot(praise);
-      window.soundManager.speak(praise);
 
       this.feedbackZoneEl.innerHTML = `
-        <div class="feedback-badge success bounce-in">
-          <span>✨ 答对啦！金星 +1 ✨</span>
+        <div class="feedback-badge success bounce-in" style="cursor:pointer;" title="点击立即进入下一题">
+          <span>✨ 答对啦！金星 +1 · 下一题 ⏭️</span>
         </div>
       `;
 
-      if (this.streak > 1 && this.streak % 3 === 0) {
-        window.soundManager.playFanfare();
-        this.setMascot(`太神奇了！连续答对 ${this.streak} 题了！快去扭蛋机看看吧！🎊`);
+      const badgeEl = this.feedbackZoneEl.querySelector('.feedback-badge');
+      if (badgeEl) {
+        badgeEl.addEventListener('click', () => {
+          window.soundManager.playPop();
+          this.generateQuestion();
+        });
       }
 
-      this.nextQuestionTimer = setTimeout(() => {
-        this.generateQuestion();
-      }, 1450);
+      // 等待夸奖语音完整播报完毕后再跳转下一题，彻底杜绝语音被下一题读题截断
+      const transitionId = ++this.transitionSeq;
+      const minDisplayPromise = new Promise((resolve) => setTimeout(resolve, 1400));
+      const speechPromise = window.soundManager.voiceEnabled
+        ? Promise.race([
+            Promise.resolve(window.soundManager.speak(praise)).catch(() => {}),
+            new Promise((resolve) => setTimeout(resolve, 6800))
+          ])
+        : Promise.resolve();
+
+      Promise.all([minDisplayPromise, speechPromise]).then(() => {
+        if (this.transitionSeq !== transitionId) return;
+        const postSpeechDelay = window.soundManager.voiceEnabled ? 380 : 50;
+        this.nextQuestionTimer = setTimeout(() => {
+          if (this.transitionSeq === transitionId) {
+            this.generateQuestion();
+          }
+        }, postSpeechDelay);
+      });
 
     } else {
       // 立即禁用该错误选项，防止连续误触扣分
