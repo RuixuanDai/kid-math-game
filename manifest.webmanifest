@@ -1,0 +1,40 @@
+{
+  "name": "童趣数学小王国 - 6岁儿童益智数学大冒险",
+  "short_name": "数学小王国",
+  "description": "专为6岁幼小衔接儿童打造的全能益智数学大冒险，支持手机与iPad离线全屏畅玩！",
+  "lang": "zh-CN",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#FFF6E9",
+  "theme_color": "#FF6B8B",
+  "categories": ["education", "kids", "games"],
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

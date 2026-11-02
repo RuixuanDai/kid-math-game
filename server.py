@@ -205,6 +205,8 @@ class CustomHandler(SimpleHTTPRequestHandler):
             return 'text/html; charset=utf-8'
         if path.endswith('.svg'):
             return 'image/svg+xml'
+        if path.endswith('.webmanifest') or path.endswith('.json'):
+            return 'application/manifest+json; charset=utf-8'
         return super().guess_type(path)
 
     def do_GET(self):

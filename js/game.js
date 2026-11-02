@@ -51,6 +51,7 @@ class MathGameApp {
 
     this.initDOMElements();
     this.bindEvents();
+    this.initPWA();
     this.updateStatsUI();
     this.switchMode('counting');
   }
@@ -275,11 +276,23 @@ class MathGameApp {
     const fullscreenToggle = document.getElementById('fullscreen-toggle');
     if (fullscreenToggle) {
       fullscreenToggle.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(() => {});
+        const docEl = document.documentElement;
+        const reqFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+        const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+        const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+        if (!reqFs) {
+          const pwaModal = document.getElementById('pwa-install-modal');
+          if (pwaModal) pwaModal.classList.add('active');
+          return;
+        }
+        if (!fsEl) {
+          Promise.resolve(reqFs.call(docEl)).catch(() => {
+            const pwaModal = document.getElementById('pwa-install-modal');
+            if (pwaModal) pwaModal.classList.add('active');
+          });
           fullscreenToggle.textContent = '🔲 退出全屏';
-        } else {
-          document.exitFullscreen().catch(() => {});
+        } else if (exitFs) {
+          Promise.resolve(exitFs.call(document)).catch(() => {});
           fullscreenToggle.textContent = '🔳 全屏玩';
         }
       });
@@ -1567,8 +1580,8 @@ class MathGameApp {
 
     const updateCanvasSize = () => {
       const rect = canvasWrap.getBoundingClientRect();
-      cssW = Math.max(280, Math.round(rect.width || 640));
-      cssH = Math.max(160, Math.round(rect.height || 260));
+      cssW = Math.max(200, Math.round(rect.width || 340));
+      cssH = Math.max(120, Math.round(rect.height || 200));
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);
       updateProjectionMetrics();
@@ -2657,6 +2670,59 @@ class MathGameApp {
     el.addEventListener('touchstart', onPointerDown, { passive: true });
 
     playground.appendChild(el);
+  }
+
+  initPWA() {
+    this.deferredInstallPrompt = null;
+    const installBtn = document.getElementById('pwa-install-btn');
+    const installModal = document.getElementById('pwa-install-modal');
+
+    const isStandalone = () =>
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches) ||
+      window.navigator.standalone === true;
+
+    const updateInstallBtnVisibility = () => {
+      if (!installBtn) return;
+      installBtn.style.display = isStandalone() ? 'none' : 'inline-flex';
+    };
+    updateInstallBtnVisibility();
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.deferredInstallPrompt = e;
+      updateInstallBtnVisibility();
+    });
+
+    window.addEventListener('appinstalled', () => {
+      this.deferredInstallPrompt = null;
+      if (installBtn) installBtn.style.display = 'none';
+      if (installModal) installModal.classList.remove('active');
+      this.setMascot('🎉 太棒啦！数学小王国已安装到桌面，随时离线畅玩！');
+    });
+
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        window.soundManager.playPop();
+        if (this.deferredInstallPrompt) {
+          this.deferredInstallPrompt.prompt();
+          try {
+            await this.deferredInstallPrompt.userChoice;
+          } catch (_) {}
+          this.deferredInstallPrompt = null;
+          return;
+        }
+        if (installModal) {
+          installModal.classList.add('active');
+        }
+      });
+    }
+
+    if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
   }
 }
 

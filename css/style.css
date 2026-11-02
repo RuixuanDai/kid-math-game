@@ -231,6 +231,21 @@ body {
   border: 2px solid #BAE6FD;
 }
 
+.btn-pwa-install {
+  background: linear-gradient(135deg, #DCFCE7 0%, #D1FAE5 100%);
+  color: #065F46;
+  border: 2px solid #6EE7B7;
+  box-shadow: 0 2px 0 #34D399;
+}
+
+.btn-pwa-install:hover {
+  background: linear-gradient(135deg, #BBF7D0 0%, #A7F3D0 100%);
+}
+
+.btn-pwa-install:active {
+  box-shadow: 0 0 0 #34D399;
+}
+
 .btn-voice-role {
   background: linear-gradient(135deg, #FCE7F3 0%, #EDE9FE 100%);
   color: #9D174D;
@@ -1903,22 +1918,691 @@ body {
   100% { transform: translateX(0); }
 }
 
-/* 窄屏设备降级适配 */
-@media (max-width: 890px) {
-  .mode-navigation {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-  }
+/* ================= 响应式与手机端全能适配 (iPad / 手机竖屏 / 手机横屏) ================= */
 
-  .stickers-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
+/* 中小平板与紧凑横屏 (<= 1080px) */
+@media (max-width: 1080px) {
   .header-bar {
     padding: 6px 12px;
   }
 
   .game-logo h1 {
     font-size: 19px;
+  }
+
+  .game-logo .logo-sub {
+    font-size: 11.5px;
+  }
+
+  .top-actions {
+    gap: 5px;
+  }
+
+  .candy-btn {
+    padding: 6px 10px;
+    font-size: 13.5px;
+  }
+
+  .stat-pill {
+    padding: 5px 10px;
+    font-size: 14.5px;
+  }
+}
+
+/* 仅在大平板 (768px ~ 1024px) 竖屏时提示横屏；手机竖屏 (< 768px) 原生全尺寸畅玩，绝不弹出遮罩 */
+@media (orientation: portrait) and (max-width: 767px) {
+  .orientation-hint-overlay {
+    display: none !important;
+  }
+}
+
+/* 手机竖屏与窄屏设备深度优化 (<= 767px) */
+@media (max-width: 767px) {
+  .game-container {
+    padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+
+  /* 1. 手机顶栏：第1行(Logo + 星星 + 连胜 + 声音/语音)，第2行(扭蛋 + 贴纸 + 导学 + 装到桌面) */
+  .header-bar {
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 6px 8px;
+    border-radius: 16px;
+    margin-bottom: 5px;
+  }
+
+  .game-logo {
+    gap: 5px;
+    margin-right: auto;
+  }
+
+  .game-logo .logo-emoji {
+    font-size: 22px;
+  }
+
+  .game-logo h1 {
+    font-size: 16.5px;
+  }
+
+  .game-logo .logo-sub {
+    display: none;
+  }
+
+  .top-actions {
+    display: contents;
+  }
+
+  .star-pill {
+    order: 1;
+    padding: 3px 8px;
+    font-size: 13px;
+    gap: 3px;
+  }
+
+  .star-pill .star-icon {
+    font-size: 14px;
+  }
+
+  .streak-pill {
+    order: 2;
+    padding: 3px 8px;
+    font-size: 13px;
+    gap: 3px;
+  }
+
+  #sound-toggle {
+    order: 3;
+    padding: 4px 7px;
+    font-size: 11.5px;
+    border-radius: 11px;
+  }
+
+  #voice-toggle {
+    order: 4;
+    padding: 4px 7px;
+    font-size: 11.5px;
+    border-radius: 11px;
+  }
+
+  .header-bar::after {
+    content: '';
+    width: 100%;
+    order: 5;
+    height: 0;
+  }
+
+  #egg-shop-btn,
+  #sticker-book-btn,
+  #parent-guide-btn,
+  #pwa-install-btn {
+    order: 6;
+    flex: 1 1 21%;
+    padding: 5px 4px;
+    font-size: 12px;
+    border-radius: 11px;
+    white-space: nowrap;
+  }
+
+  #fullscreen-toggle {
+    display: none;
+  }
+
+  /* 2. 8大关卡导航：2行×4列紧凑大触控格 */
+  .mode-navigation {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+
+  .mode-nav-btn {
+    padding: 4px 2px;
+    border-radius: 12px;
+    border-width: 2px;
+    gap: 1px;
+  }
+
+  .mode-nav-btn .mode-icon {
+    font-size: 17px;
+  }
+
+  .mode-nav-btn .mode-title {
+    font-size: 11.5px;
+  }
+
+  /* 3. 60秒冲刺 HUD 条 */
+  .speedrun-hud {
+    padding: 7px 8px 4px;
+    margin-bottom: 5px;
+    border-radius: 12px;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .speedrun-hud-item {
+    font-size: 11.5px;
+    gap: 2px;
+  }
+
+  .speedrun-hud-item .hud-val {
+    font-size: 15px;
+  }
+
+  .speedrun-timer-badge {
+    font-size: 17px !important;
+  }
+
+  /* 4. 吉祥物提示栏与难度切换：上下分层，提示语完整显示不截断 */
+  .mascot-assistant-bar {
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 5px 8px;
+    margin-bottom: 5px;
+    border-radius: 14px;
+  }
+
+  .mascot-avatar {
+    font-size: 22px;
+  }
+
+  .mascot-speech-bubble {
+    flex: 1 1 calc(100% - 34px);
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 10px;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.25;
+  }
+
+  .difficulty-selector {
+    width: 100%;
+    display: flex;
+    gap: 4px;
+    padding: 2px;
+    border-radius: 10px;
+  }
+
+  .diff-btn {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 4px 2px;
+    font-size: 11.5px;
+    border-radius: 8px;
+  }
+
+  /* 5. 核心答题舞台 */
+  .game-stage-card {
+    padding: 8px 10px;
+    border-radius: 20px;
+    border-width: 2.5px;
+  }
+
+  .question-header {
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .speak-icon-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .question-text {
+    font-size: clamp(15.5px, 4.4vw, 19px);
+    line-height: 1.2;
+  }
+
+  .question-text .tip-sub {
+    display: block;
+    font-size: 11px;
+    margin-left: 0;
+    margin-top: 1px;
+  }
+
+  .question-zone {
+    margin-bottom: 4px;
+  }
+
+  /* 关卡 1：森林数数手机适配 (5列整齐网格，群组数数2列) */
+  .counting-board {
+    padding: 8px 8px;
+    gap: 6px 8px;
+    max-width: 100%;
+    border-radius: 16px;
+  }
+
+  .counting-board.counting-grid-10 {
+    grid-template-columns: repeat(5, auto);
+    gap: 6px 8px;
+  }
+
+  .countable-item {
+    width: clamp(38px, 12.2vw, 50px);
+    height: clamp(36px, 5.2dvh, 48px);
+    font-size: clamp(21px, 6.4vw, 28px);
+    border-radius: 12px;
+  }
+
+  .count-bubble {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    top: -5px;
+    right: -5px;
+  }
+
+  .grouped-counting-board {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 8px;
+    width: 100%;
+  }
+
+  .counting-group-box {
+    min-width: 0;
+    padding: 5px 6px;
+    border-radius: 14px;
+  }
+
+  .counting-group-box .group-tag {
+    font-size: 11px;
+  }
+
+  .counting-group-box .group-items {
+    font-size: 17px;
+    letter-spacing: 1px;
+    line-height: 1.2;
+    word-break: break-all;
+    text-align: center;
+  }
+
+  /* 关卡 2：天平比大小手机适配 */
+  .balance-container {
+    gap: 6px;
+  }
+
+  .scale-plate {
+    padding: 10px 6px;
+    border-radius: 16px;
+    min-width: 0;
+  }
+
+  .plate-expr {
+    font-size: clamp(20px, 6vw, 30px);
+    min-height: 36px;
+  }
+
+  .plate-dots {
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  .plate-hint-val {
+    font-size: 13px;
+  }
+
+  .mystery-box,
+  .alligator-open {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  /* 关卡 3：趣味加减手机适配 */
+  .arithmetic-card-display {
+    padding: 10px 12px;
+    border-radius: 18px;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .big-formula-text {
+    font-size: clamp(26px, 7.8vw, 38px);
+    letter-spacing: 1px;
+  }
+
+  .blank-box {
+    min-width: 40px;
+    height: 40px;
+    line-height: 35px;
+    font-size: 26px;
+    border-radius: 10px;
+    margin: 0 3px;
+  }
+
+  .arithmetic-strategy-pill {
+    font-size: 12px;
+    padding: 5px 10px;
+    text-align: center;
+    line-height: 1.35;
+  }
+
+  /* 关卡 4：规律小火车手机适配 (全车厢自适应等宽不裁切) */
+  .train-track-container {
+    width: 100%;
+    gap: 3px;
+    padding: 8px 2px;
+    max-height: none;
+  }
+
+  .train-engine {
+    font-size: clamp(26px, 7.2vw, 34px);
+    flex-shrink: 0;
+  }
+
+  .engine-smoke {
+    font-size: 13px;
+    top: -14px;
+    left: 6px;
+  }
+
+  .train-car {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 5px 2px;
+    border-radius: 10px;
+    border-width: 2px;
+  }
+
+  .train-car .car-cargo,
+  .train-car .mystery-q {
+    font-size: clamp(16px, 4.8vw, 22px);
+  }
+
+  .wheels {
+    gap: 6px;
+    margin-top: 3px;
+  }
+
+  .wheel {
+    width: 7px;
+    height: 7px;
+    border-width: 1.5px;
+  }
+
+  /* 关卡 5：十格阵凑十手机适配 (双盒自动改为上下堆叠，大格清晰) */
+  .ten-frame-stage-col {
+    gap: 4px;
+  }
+
+  .dual-ten-frame-wrapper {
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .ten-frame-box {
+    gap: 2px;
+  }
+
+  .frame-label {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  .frame-plus {
+    font-size: 16px;
+    margin-top: 0;
+    line-height: 1;
+  }
+
+  .ten-frame {
+    gap: 4px;
+    padding: 5px;
+    border-width: 2.5px;
+    border-radius: 14px;
+  }
+
+  .dual-ten-frame-wrapper .ten-frame-cell {
+    width: clamp(34px, 10.5vw, 44px);
+    height: clamp(28px, 4.1dvh, 38px);
+    font-size: clamp(17px, 5.2vw, 23px);
+    border-radius: 8px;
+    border-width: 2px;
+  }
+
+  .single-frame .ten-frame-cell {
+    width: clamp(46px, 14vw, 62px);
+    height: clamp(46px, 14vw, 62px);
+    font-size: clamp(26px, 8vw, 36px);
+    border-radius: 12px;
+  }
+
+  /* 关卡 6：奇妙时钟手机适配 */
+  .analog-clock-container {
+    gap: 6px;
+  }
+
+  .analog-clock-svg {
+    height: min(24dvh, 190px);
+    max-width: 58vw;
+  }
+
+  .clock-legend {
+    font-size: 11.5px;
+    gap: 10px;
+    padding: 4px 10px;
+  }
+
+  /* 关卡 7：空间数积木 3D 舞台手机适配 */
+  .isometric-blocks-container {
+    gap: 5px;
+  }
+
+  .blocks-3d-stage-wrap {
+    width: 100%;
+    max-height: min(28dvh, 215px);
+    border-radius: 16px;
+  }
+
+  .blocks-rotate-hint {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    top: 6px;
+    right: 8px;
+    border-radius: 10px;
+  }
+
+  .blocks-controls-row {
+    gap: 5px;
+  }
+
+  .block-counter-pill,
+  .xray-toggle-btn {
+    font-size: 11.5px;
+    padding: 4px 9px;
+    border-radius: 14px;
+  }
+
+  /* 选项按钮与底部反馈区手机适配 */
+  .options-zone {
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+
+  .option-card {
+    height: clamp(44px, 6.5dvh, 58px);
+    font-size: clamp(20px, 6vw, 30px);
+    border-radius: 14px;
+    border-width: 2.5px;
+    box-shadow: 0 4px 0 #CBD5E1;
+  }
+
+  .balance-option-btn .big-symbol {
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .balance-option-btn .sub-label {
+    font-size: 11px;
+  }
+
+  .emoji-option-btn {
+    font-size: 26px;
+  }
+
+  .feedback-zone {
+    height: 24px;
+    min-height: 24px;
+  }
+
+  .feedback-badge {
+    font-size: 12.5px;
+    padding: 3px 12px;
+  }
+
+  /* 弹窗手机适配 */
+  .modal-card {
+    padding: 18px 14px;
+    border-radius: 22px;
+    max-height: 92dvh;
+  }
+
+  .modal-title {
+    font-size: 19px;
+  }
+
+  .modal-subtitle {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  .stickers-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    max-height: 260px;
+  }
+
+  .sticker-playground-canvas {
+    height: 180px;
+  }
+}
+
+/* 手机横屏紧凑高度适配 (高度 <= 520px 的横屏手机) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .game-container {
+    padding: 4px max(10px, env(safe-area-inset-right)) 4px max(10px, env(safe-area-inset-left));
+  }
+
+  .header-bar {
+    padding: 3px 10px;
+    margin-bottom: 4px;
+    border-radius: 12px;
+  }
+
+  .game-logo .logo-emoji {
+    font-size: 20px;
+  }
+
+  .game-logo h1 {
+    font-size: 15px;
+  }
+
+  .game-logo .logo-sub {
+    display: none;
+  }
+
+  .stat-pill,
+  .candy-btn {
+    padding: 3px 8px;
+    font-size: 11.5px;
+    border-radius: 10px;
+  }
+
+  .mode-navigation {
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .mode-nav-btn {
+    padding: 3px 2px;
+    border-radius: 10px;
+    flex-direction: row;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .mode-nav-btn .mode-icon {
+    font-size: 14px;
+  }
+
+  .mode-nav-btn .mode-title {
+    font-size: 11px;
+  }
+
+  .mascot-assistant-bar {
+    padding: 3px 10px;
+    margin-bottom: 4px;
+    border-radius: 12px;
+  }
+
+  .mascot-avatar {
+    font-size: 20px;
+  }
+
+  .mascot-speech-bubble {
+    font-size: 12px;
+    padding: 2px 8px;
+  }
+
+  .diff-btn {
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+
+  .game-stage-card {
+    padding: 6px 12px;
+    border-radius: 16px;
+  }
+
+  .question-header {
+    margin-bottom: 2px;
+  }
+
+  .speak-icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  .question-text {
+    font-size: 16px;
+  }
+
+  .question-text .tip-sub {
+    font-size: 11px;
+  }
+
+  .dual-ten-frame-wrapper .ten-frame-cell {
+    width: 34px;
+    height: 34px;
+    font-size: 20px;
+  }
+
+  .single-frame .ten-frame-cell {
+    width: 44px;
+    height: 44px;
+    font-size: 26px;
+  }
+
+  .blocks-3d-stage-wrap {
+    max-height: 36dvh;
+  }
+
+  .option-card {
+    height: 40px;
+    font-size: 22px;
+    border-radius: 12px;
+  }
+
+  .feedback-zone {
+    height: 20px;
+    min-height: 20px;
   }
 }

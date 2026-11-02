@@ -4,13 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>童趣数学小王国 - 6岁儿童进阶益智数学大冒险</title>
-  <meta name="description" content="专为6岁幼小衔接儿童打造的高难度全能益智数学网页游戏，iPad横屏满屏沉浸体验！">
+  <meta name="description" content="专为6岁幼小衔接儿童打造的高难度全能益智数学网页游戏，支持手机与iPad全屏离线畅玩！">
+  <meta name="theme-color" content="#FF6B8B">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="数学小王国">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261031_xiaoxiao_v2">
+  <link rel="stylesheet" href="css/style.css?v=20261101_pwa_v1">
 </head>
 <body>
 
@@ -39,7 +46,7 @@
         <div class="logo-emoji">🦁</div>
         <div>
           <h1>数学小王国</h1>
-          <div class="logo-sub">iPad 高能智力版 · 幼小衔接</div>
+          <div class="logo-sub">全能益智版 · 幼小衔接</div>
         </div>
       </div>
 
@@ -72,12 +79,15 @@
           <span>💡 导学</span>
         </button>
 
-        <!-- 声音、AI在线语音与全屏 -->
+        <!-- 声音、AI在线语音与全屏/安装App -->
         <button id="sound-toggle" class="candy-btn btn-secondary" data-no-tts="true" title="开启或关闭音效">
           🔊 声音
         </button>
         <button id="voice-toggle" class="candy-btn btn-secondary" data-no-tts="true" title="开启或关闭温柔姐姐晓晓 AI 语音朗读">
           🗣️ 读题开
+        </button>
+        <button id="pwa-install-btn" class="candy-btn btn-pwa-install" data-no-tts="true" title="安装到手机或iPad主屏幕，离线全屏畅玩">
+          📲 装到桌面
         </button>
         <button id="fullscreen-toggle" class="candy-btn btn-secondary" data-no-tts="true" title="切换全屏模式">
           🔳 全屏玩
@@ -300,11 +310,31 @@
     </div>
   </div>
 
+  <!-- 弹窗 5: PWA 安装到手机/iPad主屏幕指引 -->
+  <div class="modal-overlay" id="pwa-install-modal">
+    <div class="modal-card pwa-modal-card">
+      <button class="close-modal-btn" aria-label="关闭">&times;</button>
+      <div class="modal-title">📲 安装「数学小王国」到桌面</div>
+      <div class="modal-subtitle">像原生 App 一样全屏畅玩 · 支持断网离线使用！</div>
+
+      <div class="parent-guide-content">
+        <div class="guide-section">
+          <h4>🍎 iPhone / iPad (Safari 浏览器)</h4>
+          <p>1. 点击屏幕底部（或右上角）的 <strong>【分享 📤】</strong> 按钮；<br>2. 在弹出菜单中向下滑动，点击 <strong>【添加到主屏幕 ➕】</strong>；<br>3. 点击右上角 <strong>【添加】</strong>，即可从桌面图标一键全屏启动！</p>
+        </div>
+        <div class="guide-section">
+          <h4>🤖 安卓手机 / 平板 / 电脑 (Chrome / Edge)</h4>
+          <p>点击浏览器右上角菜单 <strong>【⋮】</strong> ➔ 选择 <strong>【安装应用】</strong> 或 <strong>【添加到主屏幕】</strong> 即可。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 脚本加载 (带版本号强制刷新缓存) -->
-  <script src="lib/web-natural-tts.js?v=20261031_xiaoxiao_v2"></script>
-  <script src="lib/web-online-tts.js?v=20261031_xiaoxiao_v2"></script>
-  <script src="js/audio.js?v=20261031_xiaoxiao_v2"></script>
-  <script src="js/confetti.js?v=20261031_xiaoxiao_v2"></script>
-  <script src="js/game.js?v=20261031_xiaoxiao_v2"></script>
+  <script src="lib/web-natural-tts.js?v=20261101_pwa_v1"></script>
+  <script src="lib/web-online-tts.js?v=20261101_pwa_v1"></script>
+  <script src="js/audio.js?v=20261101_pwa_v1"></script>
+  <script src="js/confetti.js?v=20261101_pwa_v1"></script>
+  <script src="js/game.js?v=20261101_pwa_v1"></script>
 </body>
 </html>
