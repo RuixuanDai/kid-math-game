@@ -2161,10 +2161,17 @@ class MathGameApp {
       }
     }, 1000);
 
-    this.generateSpeedrunQuestion();
+    this.currentMode = 'speedrun';
+    this.generateQuestion();
   }
 
   generateSpeedrunQuestion() {
+    this.questionZoneEl.innerHTML = '';
+    this.optionsZoneEl.innerHTML = '';
+    this.optionsZoneEl.className = 'options-zone';
+    this.feedbackZoneEl.innerHTML = '';
+    this.feedbackZoneEl.className = 'feedback-zone';
+
     // 综合抽取：加减法、比大小、十格阵、规律小火车、奇妙时钟
     const rand = Math.random();
     if (rand < 0.35) {
