@@ -3926,6 +3926,706 @@ body {
   }
 }
 
+/* ================= 2026-11 v8 新增6大经典数学游戏与测试题型样式 ================= */
+.chip-new-badge {
+  margin-left: auto;
+  background: linear-gradient(135deg, #EF4444, #F97316);
+  color: #FFFFFF;
+  font-size: 10.5px;
+  font-weight: 900;
+  padding: 1px 6px;
+  border-radius: 999px;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+
+.settings-preset-btn[data-preset="new"] {
+  background: #FFF7ED;
+  border-color: #FDBA74;
+  color: #C2410C;
+}
+
+.settings-preset-btn[data-preset="new"]:hover {
+  background: #FFEDD5;
+  border-color: #F97316;
+  color: #9A3412;
+}
+
+/* 1. 数字金字塔 (Brick Pyramid) */
+.pyramid-wall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 14px;
+}
+
+.pyramid-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.pyramid-connectors {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  font-size: 15px;
+  font-weight: 900;
+  color: #94A3B8;
+  line-height: 1;
+  user-select: none;
+}
+
+.pyramid-connectors.row-2 {
+  gap: 24px;
+}
+
+.pyramid-brick {
+  min-width: 96px;
+  height: 60px;
+  background: linear-gradient(180deg, #FFFBEB 0%, #FEF3C7 100%);
+  border: 3.5px solid #F59E0B;
+  border-radius: 16px;
+  box-shadow: 0 4px 0 #D97706;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  padding: 4px 12px;
+}
+
+.pyramid-row.row-top .pyramid-brick {
+  background: linear-gradient(180deg, #F5F3FF 0%, #EDE9FE 100%);
+  border-color: #8B5CF6;
+  box-shadow: 0 4px 0 #6D28D9;
+}
+
+.pyramid-brick:hover {
+  transform: translateY(-2px);
+}
+
+.pyramid-brick.target-brick {
+  background: #FEF08A;
+  border: 4px dashed #EA580C;
+  box-shadow: 0 4px 0 #C2410C;
+  color: #C2410C;
+}
+
+.brick-num {
+  font-size: 30px;
+  font-weight: 900;
+  color: #1E293B;
+  line-height: 1.05;
+}
+
+.pyramid-brick.target-brick .brick-num {
+  color: #C2410C;
+}
+
+.brick-sub {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #78350F;
+  opacity: 0.85;
+}
+
+/* 2. 水果密码代换 (Fruit Algebra) */
+.algebra-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 660px;
+}
+
+.algebra-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #F8FAFC;
+  border: 2.5px solid #E2E8F0;
+  border-radius: 20px;
+  padding: 8px 18px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.algebra-row.alg-question-row {
+  background: #FFFBEB;
+  border-color: #FCD34D;
+}
+
+.algebra-token {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 54px;
+  background: #FFFFFF;
+  border: 2.5px solid #CBD5E1;
+  border-radius: 16px;
+}
+
+.algebra-token.target-fruit {
+  border-color: #F59E0B;
+  background: #FFF7ED;
+}
+
+.alg-emoji {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.alg-sub-val {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  background: #6366F1;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 900;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border: 2px solid #FFFFFF;
+}
+
+.alg-sub-val.revealed {
+  background: #10B981;
+  transform: scale(1.1);
+}
+
+.alg-op {
+  font-size: 28px;
+  font-weight: 900;
+  color: #475569;
+}
+
+.alg-result-box,
+.alg-answer-slot {
+  min-width: 60px;
+  height: 50px;
+  border-radius: 14px;
+  background: #EDE9FE;
+  border: 3px solid #8B5CF6;
+  color: #4C1D95;
+  font-size: 28px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+}
+
+.alg-answer-slot {
+  background: #FEF08A;
+  border: 3.5px dashed #EA580C;
+  color: #C2410C;
+}
+
+.alg-step-tag {
+  margin-left: 8px;
+  background: #EEF2FF;
+  color: #4338CA;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+/* 3. 排队位置推理 (Queue Puzzle) */
+.queue-visual-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+}
+
+.queue-brace-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.queue-brace-pill {
+  background: #F1F5F9;
+  border: 2px solid #CBD5E1;
+  color: #334155;
+  font-size: 13.5px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.queue-brace-pill.hero-pill {
+  background: #FEF3C7;
+  border-color: #F59E0B;
+  color: #B45309;
+}
+
+.queue-line-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.queue-animal-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 6px 6px;
+  background: #FFFFFF;
+  border: 2.5px solid #CBD5E1;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.queue-animal-slot.hero-slot {
+  background: #FFFBEB;
+  border: 3px solid #F59E0B;
+  box-shadow: 0 3px 0 #D97706;
+  transform: translateY(-2px);
+}
+
+.queue-animal-slot.mid-target-slot {
+  background: #ECFDF5;
+  border: 3px solid #10B981;
+}
+
+.queue-animal-slot.dim-slot {
+  opacity: 0.6;
+}
+
+.queue-animal-slot.counted-bounce {
+  transform: scale(1.1);
+  border-color: #6366F1;
+}
+
+.q-idx {
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748B;
+}
+
+.q-emo {
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.q-tag {
+  font-size: 10.5px;
+  font-weight: 900;
+  background: #F59E0B;
+  color: #FFFFFF;
+  padding: 1px 5px;
+  border-radius: 999px;
+}
+
+/* 4. 超市钱币与找零 (Money & Change) */
+.money-shop-stage,
+.halves-stage-card,
+.gridpuzzle-stage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.money-card,
+.halves-card,
+.gridpuzzle-card {
+  background: #FFFFFF;
+  border: 3px solid #E2E8F0;
+  border-radius: 26px;
+  padding: 14px 20px;
+  width: 100%;
+  max-width: 820px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+}
+
+.money-card-header {
+  font-size: 15px;
+  font-weight: 900;
+  color: #475569;
+}
+
+.wallet-notes-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #F8FAFC;
+  border: 2.5px dashed #CBD5E1;
+  border-radius: 20px;
+  width: 100%;
+}
+
+.paper-bill {
+  position: relative;
+  min-width: 96px;
+  height: 54px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.14);
+  padding: 0 12px;
+  border: 2.5px solid;
+}
+
+.paper-bill.bill-5 {
+  background: linear-gradient(135deg, #F3E8FF, #DDD6FE);
+  border-color: #8B5CF6;
+  color: #5B21B6;
+}
+
+.paper-bill.bill-10 {
+  background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+  border-color: #2563EB;
+  color: #1E40AF;
+}
+
+.paper-bill.bill-20 {
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  border-color: #D97706;
+  color: #92400E;
+}
+
+.bill-corner {
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.bill-main {
+  font-size: 22px;
+}
+
+.metal-coin {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #FEF9C3, #FACC15 70%, #CA8A04);
+  border: 3px solid #B45309;
+  color: #78350F;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #92400E;
+}
+
+.metal-coin.coin-1 {
+  background: radial-gradient(circle at 30% 30%, #F8FAFC, #E2E8F0 70%, #94A3B8);
+  border-color: #475569;
+  color: #1E293B;
+  box-shadow: 0 3px 0 #475569;
+}
+
+.money-equation-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #1E293B;
+}
+
+.money-target-box {
+  min-width: 60px;
+  height: 50px;
+  border-radius: 14px;
+  background: #FEF08A;
+  border: 3.5px dashed #EA580C;
+  color: #C2410C;
+  font-size: 28px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+}
+
+.shop-scene-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+}
+
+.shop-item-card,
+.shop-change-card {
+  background: #F8FAFC;
+  border: 2.5px solid #CBD5E1;
+  border-radius: 20px;
+  padding: 10px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.shop-change-card {
+  background: #FFFBEB;
+  border-color: #FCD34D;
+}
+
+.shop-item-emoji {
+  font-size: 40px;
+  line-height: 1.1;
+}
+
+.shop-item-name {
+  font-size: 15px;
+  font-weight: 900;
+  color: #334155;
+}
+
+.shop-price-tag {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 2px solid #FCA5A5;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.shop-arrow-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.paid-label {
+  font-size: 14px;
+  font-weight: 900;
+  color: #1E40AF;
+  background: #DBEAFE;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.paid-bills-mini {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.shop-plus-sign {
+  font-size: 32px;
+  font-weight: 900;
+  color: #6366F1;
+}
+
+.change-title,
+.change-unit {
+  font-size: 14px;
+  font-weight: 900;
+  color: #92400E;
+}
+
+/* 5. 移多补少与平分 (Give-and-Take & Halves) */
+.halves-total-banner {
+  font-size: 17px;
+  font-weight: 900;
+  color: #334155;
+  background: #F1F5F9;
+  padding: 5px 16px;
+  border-radius: 999px;
+}
+
+.halves-compare-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.halves-box {
+  flex: 1;
+  min-width: 210px;
+  background: #F8FAFC;
+  border: 2.5px solid #CBD5E1;
+  border-radius: 20px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.halves-avatar {
+  font-size: 16px;
+  font-weight: 900;
+  color: #1E293B;
+}
+
+.halves-candies {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  min-height: 36px;
+}
+
+.candy-dot {
+  font-size: 24px;
+  line-height: 1.1;
+  padding: 2px;
+  border-radius: 8px;
+}
+
+.candy-dot.keep-extra-candy {
+  background: #DBEAFE;
+  border: 1.5px solid #60A5FA;
+}
+
+.candy-dot.give-away-candy {
+  background: #FEF3C7;
+  border: 2px dashed #F59E0B;
+}
+
+.halves-note {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #64748B;
+}
+
+.halves-transfer-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 13.5px;
+  font-weight: 900;
+  color: #B45309;
+}
+
+/* 6. 横竖数阵与九宫幻方 (Magic Cross & 3x3 Grid) */
+.grid-sum-badge {
+  background: #EDE9FE;
+  border: 2px solid #C4B5FD;
+  color: #5B21B6;
+  font-size: 16px;
+  font-weight: 900;
+  padding: 5px 16px;
+  border-radius: 999px;
+}
+
+.cross-grid-board,
+.grid3x3-board {
+  display: grid;
+  grid-template-columns: repeat(3, 68px);
+  grid-template-rows: repeat(3, 56px);
+  gap: 8px;
+  padding: 6px;
+}
+
+.grid-cell {
+  background: #F8FAFC;
+  border: 3px solid #94A3B8;
+  border-radius: 14px;
+  font-size: 28px;
+  font-weight: 900;
+  color: #1E293B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 0 #CBD5E1;
+}
+
+.grid-cell.empty-cell {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.grid-cell.center-shared-cell {
+  background: #EDE9FE;
+  border-color: #8B5CF6;
+  color: #4C1D95;
+}
+
+.grid-cell.highlight-row-cell {
+  background: #EFF6FF;
+  border-color: #60A5FA;
+}
+
+.grid-cell.target-grid-cell {
+  background: #FEF08A;
+  border: 3.5px dashed #EA580C;
+  color: #C2410C;
+}
+
+@media (max-width: 767px) {
+  .pyramid-brick {
+    min-width: 74px;
+    height: 48px;
+  }
+  .brick-num {
+    font-size: 22px;
+  }
+  .algebra-token {
+    width: 46px;
+    height: 44px;
+  }
+  .alg-emoji {
+    font-size: 26px;
+  }
+  .alg-step-tag {
+    display: none;
+  }
+  .cross-grid-board,
+  .grid3x3-board {
+    grid-template-columns: repeat(3, 56px);
+    grid-template-rows: repeat(3, 46px);
+    gap: 6px;
+  }
+  .grid-cell {
+    font-size: 22px;
+  }
+}
+
 :root {
-  --math-css-build: "20261106_v7";
+  --math-css-build: "20261107_v8";
 }

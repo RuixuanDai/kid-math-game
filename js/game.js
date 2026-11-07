@@ -1,6 +1,6 @@
-// 6岁儿童数学小王国 - 智能自适应与自定义题库旗舰版
+// 6岁儿童数学小王国 - 智能自适应与自定义题库旗舰版（22大经典幼小衔接题型全收录）
 // 支持「智能自适应闯关」与「⚙️ 设置中心自定义题型/难度/全屏/音效/家长防改锁」，精简答题后语音反馈，节奏轻快不拖沓
-window.__MATH_GAME_BUILD = '20261106_v7';
+window.__MATH_GAME_BUILD = '20261107_v8';
 
 class MathGameApp {
   constructor() {
@@ -27,12 +27,15 @@ class MathGameApp {
     this.transitionSeq = 0;
     this.lastClockMinute = null;
 
-    // 16类全覆盖课程目录（支持设置页自由勾选）
+    // 22类全覆盖课程目录（支持设置页自由勾选，含6大新增思维益智题型）
     this.curriculumCatalog = [
       { id: 'ktest:q1', group: 'ktest', icon: '🔗', mode: 'ktest', subType: 'q1', label: '凑十数键', tag: '🎓 真题特训', sprintOk: true },
       { id: 'ktest:q2', group: 'ktest', icon: '🌿', mode: 'ktest', subType: 'q2', label: '连环分合', tag: '🎓 真题特训', sprintOk: true },
       { id: 'ktest:q3', group: 'ktest', icon: '🧮', mode: 'ktest', subType: 'q3', label: '一图四式', tag: '🎓 真题特训', sprintOk: false },
       { id: 'ktest:q4', group: 'ktest', icon: '🗼', mode: 'ktest', subType: 'q4', label: '三格数塔', tag: '🎓 真题特训', sprintOk: true },
+      { id: 'ktest:pyramid', group: 'ktest', icon: '🧱', mode: 'ktest', subType: 'pyramid', label: '数字金字塔', tag: '🧱 金字塔推理', sprintOk: true, isNew: true },
+      { id: 'ktest:algebra', group: 'ktest', icon: '🍎', mode: 'ktest', subType: 'algebra', label: '水果密码代换', tag: '🍎 等量代换', sprintOk: true, isNew: true },
+      { id: 'ktest:queue', group: 'ktest', icon: '🧍', mode: 'ktest', subType: 'queue', label: '排队位置推理', tag: '🧍 排队应用题', sprintOk: true, isNew: true },
       { id: 'ktest:q5a', group: 'ktest', icon: '🧠', mode: 'ktest', subType: 'q5a', label: '多步文字推理', tag: '🎓 真题特训', sprintOk: true },
       { id: 'ktest:q5b', group: 'ktest', icon: '⚖️', mode: 'ktest', subType: 'q5b', label: '双边等式天平', tag: '🎓 真题特训', sprintOk: true },
       { id: 'arithmetic:blank', group: 'calc', icon: '❓', mode: 'arithmetic', subType: 'blank', label: '逆向未知数', tag: '🍩 进阶算术', sprintOk: true },
@@ -42,12 +45,16 @@ class MathGameApp {
       { id: 'tenframes:make10', group: 'calc', icon: '🔴', mode: 'tenframes', subType: 'make10', label: '十格阵凑十', tag: '🧪 数感建模', sprintOk: true },
       { id: 'tenframes:break10', group: 'calc', icon: '🟢', mode: 'tenframes', subType: 'break10', label: '十格阵破十', tag: '🧪 数感建模', sprintOk: true },
       { id: 'counting:grouped', group: 'calc', icon: '🍓', mode: 'counting', subType: 'grouped', label: '群组倍增快数', tag: '🍓 乘法启蒙', sprintOk: true },
+      { id: 'calc:money', group: 'calc', icon: '🪙', mode: 'money', subType: 'shop', label: '超市钱币与找零', tag: '🪙 人民币应用', sprintOk: true, isNew: true },
+      { id: 'calc:halves', group: 'calc', icon: '🍬', mode: 'halves', subType: 'share', label: '移多补少与平分', tag: '🍬 巧算平分', sprintOk: true, isNew: true },
       { id: 'patterns:numeric', group: 'visual', icon: '🚂', mode: 'patterns', subType: 'numeric', label: '数字规律火车', tag: '🚂 逻辑归纳', sprintOk: true },
+      { id: 'visual:gridpuzzle', group: 'visual', icon: '🔢', mode: 'gridpuzzle', subType: 'cross', label: '横竖数阵幻方', tag: '🔢 幻方数阵', sprintOk: true, isNew: true },
       { id: 'blocks:3d', group: 'visual', icon: '🧩', mode: 'blocks', subType: '3d', label: '3D遮挡数积木', tag: '🧩 空间推理', sprintOk: false },
       { id: 'clocks:time', group: 'visual', icon: '⏰', mode: 'clocks', subType: 'time', label: '钟表认读与推算', tag: '⏰ 时间认知', sprintOk: true }
     ];
 
     this.enabledSkillIds = new Set(this.curriculumCatalog.map(s => s.id));
+    this.initialDeckSeeded = false;
     this.loadSettings();
 
     this.questionDeck = [];
@@ -113,6 +120,12 @@ class MathGameApp {
         const filtered = parsed.enabledSkills.filter(id => validIds.has(id));
         if (filtered.length > 0) {
           this.enabledSkillIds = new Set(filtered);
+          // 从旧版16题升级到新版22题时，若非专项单练1题，自动把新增6大题型勾选上
+          if ((!parsed.catalogVersion || parsed.catalogVersion < 2) && filtered.length >= 6) {
+            this.curriculumCatalog.forEach(s => {
+              if (s.isNew) this.enabledSkillIds.add(s.id);
+            });
+          }
         }
       }
     } catch (_) {}
@@ -121,6 +134,7 @@ class MathGameApp {
   saveSettings() {
     try {
       localStorage.setItem('kid_math_settings_v1', JSON.stringify({
+        catalogVersion: 2,
         difficultySetting: this.difficultySetting,
         parentLockEnabled: this.parentLockEnabled,
         enabledSkills: Array.from(this.enabledSkillIds)
@@ -321,6 +335,9 @@ class MathGameApp {
         let tipMsg = '';
         if (preset === 'all') {
           targetIds = this.curriculumCatalog.map(s => s.id);
+        } else if (preset === 'new') {
+          targetIds = this.curriculumCatalog.filter(s => s.isNew).map(s => s.id);
+          tipMsg = '🔥 已切换为「6大新增趣味题型」专项特训！';
         } else if (preset === 'ktest') {
           targetIds = this.curriculumCatalog.filter(s => s.group === 'ktest').map(s => s.id);
         } else if (preset === 'calc') {
@@ -628,20 +645,22 @@ class MathGameApp {
     if (!container) return;
 
     const groups = [
-      { key: 'ktest', title: '🎓 K班测试核心真题（6项）' },
-      { key: 'calc', title: '🧮 算术·凑十破十·天平·群数（7项）' },
-      { key: 'visual', title: '🧩 规律火车·3D积木·奇妙时钟（3项）' }
+      { key: 'ktest', title: '🎓 K班测试与思维推理真题（9项）' },
+      { key: 'calc', title: '🧮 算术·钱币找零·平分·凑十破十（9项）' },
+      { key: 'visual', title: '🧩 规律火车·数阵幻方·3D积木·时钟（4项）' }
     ];
 
     container.innerHTML = groups.map(grp => {
       const items = this.curriculumCatalog.filter(s => s.group === grp.key);
       const chipsHtml = items.map(skill => {
         const checked = this.enabledSkillIds.has(skill.id);
+        const newBadge = skill.isNew ? '<span class="chip-new-badge">新</span>' : '';
         return `
           <button type="button" class="settings-skill-chip ${checked ? 'checked' : ''}" data-skill-id="${skill.id}" data-no-tts="true">
             <span class="chip-check">${checked ? '✅' : '⬜'}</span>
             <span class="chip-icon">${skill.icon}</span>
             <span class="chip-name">${skill.label}</span>
+            ${newBadge}
           </button>
         `;
       }).join('');
@@ -792,7 +811,16 @@ class MathGameApp {
     // 2. 从已勾选的课程牌组中洗牌抽取
     this.questionDeck = this.questionDeck.filter(s => this.enabledSkillIds.has(s.id));
     if (this.questionDeck.length === 0) {
-      this.questionDeck = this.shuffleArray(enabledPool);
+      const shuffled = this.shuffleArray(enabledPool);
+      if (!this.initialDeckSeeded && enabledPool.length >= 6) {
+        this.initialDeckSeeded = true;
+        const newOnes = this.shuffleArray(shuffled.filter(s => s.isNew)).slice(0, 2);
+        const newSet = new Set(newOnes.map(s => s.id));
+        const rest = shuffled.filter(s => !newSet.has(s.id));
+        this.questionDeck = [...newOnes, ...rest];
+      } else {
+        this.questionDeck = shuffled;
+      }
     }
 
     // 避免相邻两题同款；若启用池 >= 4 项则让一图四式至少间隔 3 题
@@ -934,6 +962,15 @@ class MathGameApp {
           break;
         case 'blocks':
           this.generateBlocksQuestion(skill.subType);
+          break;
+        case 'money':
+          this.generateMoneyQuestion(skill.subType);
+          break;
+        case 'halves':
+          this.generateEqualShareQuestion(skill.subType);
+          break;
+        case 'gridpuzzle':
+          this.generateGridPuzzleQuestion(skill.subType);
           break;
         case 'ktest':
         default:
@@ -2589,7 +2626,7 @@ class MathGameApp {
 
     let chosenType = forcedSubType;
     if (!chosenType || chosenType === 'all') {
-      const allTypes = ['q1', 'q2', 'q3', 'q4', 'q5a', 'q5b'];
+      const allTypes = ['q1', 'q2', 'q3', 'q4', 'pyramid', 'algebra', 'queue', 'q5a', 'q5b'];
       const candidates = this.lastKTestType
         ? allTypes.filter(t => t !== this.lastKTestType)
         : allTypes;
@@ -2611,6 +2648,15 @@ class MathGameApp {
         break;
       case 'q4':
         this.buildKTestQ4NumberTowers(stage);
+        break;
+      case 'pyramid':
+        this.buildKTestQ6BrickPyramid(stage);
+        break;
+      case 'algebra':
+        this.buildKTestQ7FruitAlgebra(stage);
+        break;
+      case 'queue':
+        this.buildKTestQ8QueuePuzzle(stage);
         break;
       case 'q5a':
         this.buildKTestQ5Challenge(stage, 'q5a');
@@ -3493,6 +3539,823 @@ class MathGameApp {
     }
   }
 
+  // 真题题型 6: 数字金字塔（3层6格砖墙，上面砖块 = 下面相邻两块之和，支持顺推与逆推）
+  buildKTestQ6BrickPyramid(stage) {
+    const isEasy10 = this.difficulty === '10';
+    const isHard100 = this.difficulty === '100';
+
+    let b1, b2, b3;
+    if (isEasy10) {
+      b2 = Math.floor(Math.random() * 3) + 1; // 1~3
+      b1 = Math.floor(Math.random() * 3) + 1; // 1~3
+      b3 = Math.floor(Math.random() * 3) + 1; // 1~3
+    } else if (!isHard100) {
+      b2 = Math.floor(Math.random() * 4) + 2; // 2~5
+      b1 = Math.floor(Math.random() * 5) + 2; // 2~6
+      b3 = Math.floor(Math.random() * 5) + 2; // 2~6
+    } else {
+      b2 = Math.floor(Math.random() * 6) + 3; // 3~8
+      b1 = Math.floor(Math.random() * 7) + 3; // 3~9
+      b3 = Math.floor(Math.random() * 7) + 3; // 3~9
+    }
+
+    const m1 = b1 + b2;
+    const m2 = b2 + b3;
+    const top = m1 + m2;
+
+    const roll = Math.random();
+    let askPos = 'top'; // 'top' | 'm1' | 'b3' | 'b2'
+    if (isEasy10) {
+      askPos = roll < 0.55 ? 'top' : 'm1';
+    } else if (!isHard100) {
+      askPos = roll < 0.38 ? 'top' : (roll < 0.68 ? 'm1' : 'b3');
+    } else {
+      askPos = roll < 0.3 ? 'top' : (roll < 0.55 ? 'b3' : 'b2');
+    }
+
+    let correctAnswer = top;
+    let trapValue = m1 + b3;
+    let promptText = '';
+    let voiceText = '';
+    let helperText = '';
+
+    if (askPos === 'top') {
+      correctAnswer = top;
+      trapValue = b1 + b2 + b3;
+      promptText = `数字金字塔：每块砖等于下面两块相加，顶上问号填几？`;
+      voiceText = `数字金字塔，上面一格等于下面相邻两格相加。${m1}加${m2}等于几？`;
+      helperText = `💡 规律：上面一格 = 下面相邻两格相加，所以顶格 = <strong>${m1} + ${m2} = <span class="ktest-step-reveal">?</span></strong>`;
+    } else if (askPos === 'm1') {
+      correctAnswer = m1;
+      trapValue = top - b1;
+      promptText = `数字金字塔：左边中间砖块等于下面 ${b1} + ${b2}，问号填几？`;
+      voiceText = `数字金字塔，看左下角两块砖，${b1}加${b2}等于几？`;
+      helperText = `💡 规律：上面一格 = 下面相邻两格相加，所以问号 = <strong>${b1} + ${b2} = <span class="ktest-step-reveal">?</span></strong>`;
+    } else if (askPos === 'b3') {
+      correctAnswer = b3;
+      trapValue = m2 + b2;
+      promptText = `数字金字塔：右边中间是 ${m2}，下面已有 ${b2}，右下角问号填几？`;
+      voiceText = `数字金字塔，${b2}加几等于${m2}？想一想${m2}减${b2}等于几？`;
+      helperText = `💡 逆推规律：${b2} + 问号 = ${m2}，所以问号 = <strong>${m2} - ${b2} = <span class="ktest-step-reveal">?</span></strong>`;
+    } else {
+      correctAnswer = b2;
+      trapValue = m1 + b1;
+      promptText = `数字金字塔：上面是 ${m1} 和 ${m2}，底排正中间问号填几？`;
+      voiceText = `数字金字塔，${b1}加中间的数等于${m1}，中间问号填几？`;
+      helperText = `💡 逆推规律：${b1} + 问号 = ${m1}，所以正中间问号 = <strong>${m1} - ${b1} = <span class="ktest-step-reveal">?</span></strong>`;
+    }
+
+    this.questionTextEl.textContent = promptText;
+
+    this.currentQuestion = {
+      type: 'ktest',
+      subType: 'pyramid',
+      answer: correctAnswer,
+      audioPrompt: voiceText,
+      praiseText: helperText.replace(/<[^>]+>/g, ''),
+      trapValue,
+      trapHint: `🧱 金字塔口诀：上面砖块 = 下面两块之和！顺算用加法，倒推求下层用减法哦！`,
+      shortTrapVoice: askPos === 'top' || askPos === 'm1' ? '下面两格加起来哦' : '倒推要用减法哦'
+    };
+
+    const renderBrick = (val, posKey, formulaTip) => {
+      const isTarget = posKey === askPos;
+      return `
+        <div class="pyramid-brick ${isTarget ? 'target-brick ktest-target-slot mystery-pulse' : ''}" data-tip="${formulaTip}">
+          <span class="brick-num">${isTarget ? '?' : val}</span>
+          ${!isTarget && formulaTip ? `<span class="brick-sub">${formulaTip}</span>` : ''}
+        </div>
+      `;
+    };
+
+    const card = document.createElement('div');
+    card.className = 'ktest-card pyramid-stage-card pop-in';
+    card.innerHTML = `
+      <div class="pyramid-wall">
+        <div class="pyramid-row row-top">
+          ${renderBrick(top, 'top', `${m1}+${m2}`)}
+        </div>
+        <div class="pyramid-connectors">
+          <span>╱</span><span>╲</span><span>╱</span><span>╲</span>
+        </div>
+        <div class="pyramid-row row-mid">
+          ${renderBrick(m1, 'm1', `${b1}+${b2}`)}
+          ${renderBrick(m2, 'm2', `${b2}+${b3}`)}
+        </div>
+        <div class="pyramid-connectors row-2">
+          <span>╱</span><span>╲</span><span>╱</span><span>╲</span><span>╱</span><span>╲</span>
+        </div>
+        <div class="pyramid-row row-bot">
+          ${renderBrick(b1, 'b1', '')}
+          ${renderBrick(b2, 'b2', '')}
+          ${renderBrick(b3, 'b3', '')}
+        </div>
+      </div>
+      <div class="ktest-helper-pill">${helperText}</div>
+    `;
+
+    card.querySelectorAll('.pyramid-brick').forEach(brick => {
+      brick.addEventListener('click', () => {
+        window.soundManager.playPop();
+        window.soundManager.speak('上面一块砖，等于它下面挨着的两块砖加起来！');
+      });
+    });
+
+    stage.appendChild(card);
+    const options = this.generateChoices(correctAnswer, Math.max(1, correctAnswer - 5), correctAnswer + 6, 4);
+    this.renderOptions(options, correctAnswer);
+  }
+
+  // 真题题型 7: 水果密码代换（幼小衔接必考图形等量代换：🍎+🍎=10, 🍎+🍌=14 -> 🍌=?）
+  buildKTestQ7FruitAlgebra(stage) {
+    const isEasy10 = this.difficulty === '10';
+    const isHard100 = this.difficulty === '100';
+
+    const pairs = [
+      { e1: '🍎', n1: '红苹果', e2: '🍌', n2: '小香蕉' },
+      { e1: '🍓', n1: '红草莓', e2: '🍇', n2: '紫葡萄' },
+      { e1: '🍉', n1: '大西瓜', e2: '🍍', n2: '小菠萝' },
+      { e1: '🍑', n1: '水蜜桃', e2: '🍒', n2: '红樱桃' },
+      { e1: '🍊', n1: '甜橘子', e2: '🍐', n2: '大鸭梨' }
+    ];
+    const pair = pairs[Math.floor(Math.random() * pairs.length)];
+
+    const v1 = isEasy10
+      ? (Math.floor(Math.random() * 4) + 2)   // 2~5 (sum1: 4~10)
+      : (!isHard100
+        ? (Math.floor(Math.random() * 5) + 4) // 4~8 (sum1: 8~16)
+        : (Math.floor(Math.random() * 6) + 6)); // 6~11 (sum1: 12~22)
+
+    let v2 = isEasy10
+      ? (Math.floor(Math.random() * 5) + 2)
+      : (!isHard100
+        ? (Math.floor(Math.random() * 7) + 3)
+        : (Math.floor(Math.random() * 9) + 5));
+    if (v2 === v1) v2 += 2;
+
+    const sum1 = v1 + v1;
+    // 高阶模式 40% 概率第2式为减法或三果相加
+    const useSubInRow2 = isHard100 && v2 > v1 && Math.random() < 0.4;
+    const row2Total = useSubInRow2 ? (v2 - v1) : (v1 + v2);
+    const correctAnswer = v2;
+    const trapValue = useSubInRow2 ? Math.max(1, row2Total - v1) : row2Total;
+
+    const promptText = useSubInRow2
+      ? `水果密码：已知 ${pair.e1}+${pair.e1}=${sum1}，且 ${pair.e2}-${pair.e1}=${row2Total}，请问 1个${pair.e2} 等于几？`
+      : `水果密码：已知 ${pair.e1}+${pair.e1}=${sum1}，且 ${pair.e1}+${pair.e2}=${row2Total}，请问 1个${pair.e2} 等于几？`;
+    const voiceText = useSubInRow2
+      ? `水果密码代换：两个${pair.n1}加起来等于${sum1}，先算出一个${pair.n1}是几，再算${pair.n2}等于几？`
+      : `水果密码代换：两个${pair.n1}加起来等于${sum1}，先想一个${pair.n1}是${v1}，那一个${pair.n2}等于几？`;
+
+    this.questionTextEl.textContent = promptText;
+
+    this.currentQuestion = {
+      type: 'ktest',
+      subType: 'algebra',
+      answer: correctAnswer,
+      audioPrompt: voiceText,
+      praiseText: `太棒啦！${pair.e1}=${v1}，代入算出 ${pair.e2}=${correctAnswer}！`,
+      trapValue,
+      trapHint: `🍎 等量代换两步走：第一步由 ${pair.e1}+${pair.e1}=${sum1} 算出 ${pair.e1}=${v1}；第二步代进第二行算出 ${pair.e2}=${correctAnswer}！`,
+      shortTrapVoice: `先算一个${pair.n1}是${v1}哦`
+    };
+
+    const card = document.createElement('div');
+    card.className = 'ktest-card algebra-stage-card pop-in';
+    card.innerHTML = `
+      <div class="algebra-board">
+        <div class="algebra-row" id="alg-row-1" title="点击揭晓第一个水果密码">
+          <div class="algebra-token"><span class="alg-emoji">${pair.e1}</span><span class="alg-sub-val" data-reveal="${v1}">?</span></div>
+          <span class="alg-op">+</span>
+          <div class="algebra-token"><span class="alg-emoji">${pair.e1}</span><span class="alg-sub-val" data-reveal="${v1}">?</span></div>
+          <span class="alg-op">=</span>
+          <div class="alg-result-box">${sum1}</div>
+          <span class="alg-step-tag">① 先算 ${pair.e1} = ${v1}</span>
+        </div>
+
+        <div class="algebra-row" id="alg-row-2">
+          ${useSubInRow2 ? `
+            <div class="algebra-token target-fruit"><span class="alg-emoji">${pair.e2}</span></div>
+            <span class="alg-op">−</span>
+            <div class="algebra-token"><span class="alg-emoji">${pair.e1}</span><span class="alg-sub-val">${v1}</span></div>
+            <span class="alg-op">=</span>
+            <div class="alg-result-box">${row2Total}</div>
+          ` : `
+            <div class="algebra-token"><span class="alg-emoji">${pair.e1}</span><span class="alg-sub-val">${v1}</span></div>
+            <span class="alg-op">+</span>
+            <div class="algebra-token target-fruit"><span class="alg-emoji">${pair.e2}</span></div>
+            <span class="alg-op">=</span>
+            <div class="alg-result-box">${row2Total}</div>
+          `}
+          <span class="alg-step-tag">② 代入算 ${pair.e2}</span>
+        </div>
+
+        <div class="algebra-row alg-question-row">
+          <div class="algebra-token target-fruit"><span class="alg-emoji">${pair.e2}</span></div>
+          <span class="alg-op">=</span>
+          <div class="alg-answer-slot ktest-target-slot mystery-pulse">?</div>
+        </div>
+      </div>
+
+      <div class="ktest-helper-pill">
+        💡 破译线索：因为 <strong>${v1} + ${v1} = ${sum1}</strong>，所以 <strong>${pair.e1} = ${v1}</strong>；那么 <strong>${pair.e2} = ${useSubInRow2 ? `${row2Total} + ${v1}` : `${row2Total} - ${v1}`} = <span class="ktest-step-reveal">?</span></strong>
+      </div>
+    `;
+
+    const row1El = card.querySelector('#alg-row-1');
+    if (row1El) {
+      row1El.addEventListener('click', () => {
+        window.soundManager.playPop();
+        card.querySelectorAll('.alg-sub-val[data-reveal]').forEach(el => {
+          el.textContent = el.dataset.reveal;
+          el.classList.add('revealed');
+        });
+        window.soundManager.speak(`${v1}加${v1}等于${sum1}，所以一个${pair.n1}代表${v1}！`);
+      });
+    }
+
+    stage.appendChild(card);
+    const options = this.generateChoices(correctAnswer, Math.max(1, correctAnswer - 4), correctAnswer + 5, 4);
+    this.renderOptions(options, correctAnswer);
+  }
+
+  // 真题题型 8: 排队位置推理（幼小衔接必考易错应用题：前有几人后有几人求总人数 / 第A与第B之间有几人）
+  buildKTestQ8QueuePuzzle(stage) {
+    const isEasy10 = this.difficulty === '10';
+    const isHard100 = this.difficulty === '100';
+
+    const heroes = [
+      { emoji: '🐼', name: '小熊猫' },
+      { emoji: '🐰', name: '小兔子' },
+      { emoji: '🦊', name: '小狐狸' },
+      { emoji: '🦁', name: '小狮子' }
+    ];
+    const hero = heroes[Math.floor(Math.random() * heroes.length)];
+    const others = ['🐥', '🐶', '🐱', '🐸', '🐧', '🐨', '🐯', '🐻'];
+
+    // 模式 A: 前面有 a 人，后面有 b 人，一共几人？ (a + b + 1，经典漏加自己陷阱 a + b)
+    // 模式 B: 从左数排第 m，从右数排第 n，一共几人？ (m + n - 1，经典重复算自己陷阱 m + n)
+    // 模式 C: 排第 p 和排第 q 之间有几人？ (q - p - 1，经典漏减1陷阱 q - p)
+    const roll = Math.random();
+    const mode = isEasy10
+      ? (roll < 0.7 ? 'front_back' : 'between')
+      : (!isHard100
+        ? (roll < 0.45 ? 'front_back' : (roll < 0.78 ? 'between' : 'both_ends'))
+        : (roll < 0.35 ? 'front_back' : (roll < 0.68 ? 'between' : 'both_ends')));
+
+    let correctAnswer = 0;
+    let trapValue = 0;
+    let promptText = '';
+    let voiceText = '';
+    let helperText = '';
+    let shortTrapVoice = '';
+    let lineSlotsHtml = '';
+
+    if (mode === 'front_back') {
+      const front = isEasy10 ? (Math.floor(Math.random() * 3) + 2) : (Math.floor(Math.random() * 5) + 3);
+      const back = isEasy10 ? (Math.floor(Math.random() * 3) + 1) : (Math.floor(Math.random() * 5) + 2);
+      correctAnswer = front + back + 1;
+      trapValue = front + back; // 经典陷阱：忘了加主角自己 1 人！
+      promptText = `排队推理：${hero.name}${hero.emoji}前面有 ${front} 只小动物，后面有 ${back} 只，这一队一共有几只？`;
+      voiceText = `排队问题：${hero.name}前面有${front}只，后面有${back}只，别忘了算上${hero.name}自己，一共有几只？`;
+      helperText = `💡 防坑口诀：前面 <strong>${front}</strong> 只 + 后面 <strong>${back}</strong> 只 + <strong>${hero.name}自己 1 只</strong> = <strong><span class="ktest-step-reveal">?</span></strong> 只`;
+      shortTrapVoice = `别漏掉${hero.name}自己1只哦`;
+
+      const cells = [];
+      for (let i = 0; i < front; i++) {
+        cells.push(`<div class="queue-animal-slot front-slot"><span class="q-idx">${i + 1}</span><span class="q-emo">${others[i % others.length]}</span></div>`);
+      }
+      cells.push(`<div class="queue-animal-slot hero-slot"><span class="q-idx">主角</span><span class="q-emo">${hero.emoji}</span><span class="q-tag">+1自己</span></div>`);
+      for (let j = 0; j < back; j++) {
+        cells.push(`<div class="queue-animal-slot back-slot"><span class="q-idx">后${j + 1}</span><span class="q-emo">${others[(front + j) % others.length]}</span></div>`);
+      }
+      lineSlotsHtml = `
+        <div class="queue-brace-row">
+          <span class="queue-brace-pill">⬅️ 前面 ${front} 只</span>
+          <span class="queue-brace-pill hero-pill">🌟 ${hero.name} (1只)</span>
+          <span class="queue-brace-pill">后面 ${back} 只 ➡️</span>
+        </div>
+        <div class="queue-line-row">${cells.join('')}</div>
+      `;
+    } else if (mode === 'both_ends') {
+      const leftOrd = Math.floor(Math.random() * 4) + 3; // 3~6
+      const rightOrd = Math.floor(Math.random() * 4) + 3; // 3~6
+      correctAnswer = leftOrd + rightOrd - 1;
+      trapValue = leftOrd + rightOrd; // 经典陷阱：主角被左右各数了一次，忘了减 1！
+      promptText = `排队推理：从左数${hero.name}${hero.emoji}排第 ${leftOrd}，从右数排第 ${rightOrd}，这一队一共有几只？`;
+      voiceText = `从左数${hero.name}排第${leftOrd}，从右数排第${rightOrd}，${hero.name}被数了两次，一共有几只？`;
+      helperText = `💡 防坑口诀：左数第 <strong>${leftOrd}</strong> + 右数第 <strong>${rightOrd}</strong> − <strong>重复数的 1 次</strong> = <strong><span class="ktest-step-reveal">?</span></strong> 只`;
+      shortTrapVoice = '主角数了两次要减1哦';
+
+      const cells = [];
+      for (let i = 1; i <= correctAnswer; i++) {
+        const isHero = i === leftOrd;
+        cells.push(`
+          <div class="queue-animal-slot ${isHero ? 'hero-slot' : ''}">
+            <span class="q-idx">左${i}</span>
+            <span class="q-emo">${isHero ? hero.emoji : others[i % others.length]}</span>
+            ${isHero ? `<span class="q-tag">右${rightOrd}</span>` : ''}
+          </div>
+        `);
+      }
+      lineSlotsHtml = `
+        <div class="queue-brace-row">
+          <span class="queue-brace-pill">👉 从左数第 ${leftOrd}</span>
+          <span class="queue-brace-pill hero-pill">⚠️ ${hero.name}被数了2次，要 -1</span>
+          <span class="queue-brace-pill">👈 从右数第 ${rightOrd}</span>
+        </div>
+        <div class="queue-line-row">${cells.join('')}</div>
+      `;
+    } else {
+      const p = isEasy10 ? 2 : (Math.floor(Math.random() * 3) + 2); // 2~4
+      const betweenCnt = isEasy10 ? (Math.floor(Math.random() * 3) + 2) : (Math.floor(Math.random() * 5) + 3);
+      const q = p + betweenCnt + 1;
+      correctAnswer = betweenCnt;
+      trapValue = q - p; // 经典陷阱：直接相减忘了再减 1！
+      promptText = `排队推理：小兔🐰排第 ${p}，小熊🐻排第 ${q}，它们两个「之间」有几只小动物？`;
+      voiceText = `排队问题：小兔排第${p}，小熊排第${q}，它们两个中间夹着几只小动物？`;
+      helperText = `💡 防坑口诀：「之间」不包括两头！用 <strong>${q} − ${p} − 1 = <span class="ktest-step-reveal">?</span></strong> 只（点图中小动物数一数）`;
+      shortTrapVoice = '求之间要再减1哦';
+
+      const cells = [];
+      for (let i = 1; i <= q; i++) {
+        const isEndA = i === p;
+        const isEndB = i === q;
+        const isMid = i > p && i < q;
+        cells.push(`
+          <div class="queue-animal-slot ${isEndA || isEndB ? 'hero-slot' : (isMid ? 'mid-target-slot' : 'dim-slot')}">
+            <span class="q-idx">第${i}</span>
+            <span class="q-emo">${isEndA ? '🐰' : (isEndB ? '🐻' : others[i % others.length])}</span>
+            ${isMid ? `<span class="q-tag">中间</span>` : ''}
+          </div>
+        `);
+      }
+      lineSlotsHtml = `
+        <div class="queue-brace-row">
+          <span class="queue-brace-pill">🐰 第 ${p}（不算）</span>
+          <span class="queue-brace-pill hero-pill">🔍 数一数中间绿色框有几只？</span>
+          <span class="queue-brace-pill">🐻 第 ${q}（不算）</span>
+        </div>
+        <div class="queue-line-row">${cells.join('')}</div>
+      `;
+    }
+
+    this.questionTextEl.textContent = promptText;
+
+    this.currentQuestion = {
+      type: 'ktest',
+      subType: 'queue',
+      answer: correctAnswer,
+      audioPrompt: voiceText,
+      praiseText: helperText.replace(/<[^>]+>/g, ''),
+      trapValue,
+      trapHint: helperText.replace(/<[^>]+>/g, ''),
+      shortTrapVoice
+    };
+
+    const card = document.createElement('div');
+    card.className = 'ktest-card queue-stage-card pop-in';
+    card.innerHTML = `
+      <div class="queue-visual-box">
+        ${lineSlotsHtml}
+      </div>
+      <div class="ktest-helper-pill">${helperText}</div>
+    `;
+
+    card.querySelectorAll('.queue-animal-slot').forEach((slot, idx) => {
+      slot.addEventListener('click', () => {
+        window.soundManager.playPop();
+        slot.classList.toggle('counted-bounce');
+        window.soundManager.speak(`${idx + 1}`);
+      });
+    });
+
+    stage.appendChild(card);
+    const options = this.generateChoices(correctAnswer, Math.max(1, correctAnswer - 3), correctAnswer + 4, 4);
+    this.renderOptions(options, correctAnswer);
+  }
+
+  // ================= 新增题型 9: 超市钱币与找零 (人民币纸币/硬币点钞、买文具付款与找零) =================
+  generateMoneyQuestion() {
+    const isEasy10 = this.difficulty === '10';
+    const isHard100 = this.difficulty === '100';
+
+    const items = [
+      { emoji: '🖍️', name: '彩色蜡笔' },
+      { emoji: '📓', name: '卡通画册' },
+      { emoji: '🧸', name: '玩具小熊' },
+      { emoji: '🚗', name: '合金小车' },
+      { emoji: '🎨', name: '水彩颜料' },
+      { emoji: '🦖', name: '恐龙模型' }
+    ];
+    const item = items[Math.floor(Math.random() * items.length)];
+
+    // 模式 1: 钱包点钞（数一数一共有多少元）
+    // 模式 2: 超市找零（付 N 元买价格 P 元的商品，应找回多少元？）
+    // 模式 3: 买两样商品一共多少元？
+    const roll = Math.random();
+    const mode = isEasy10
+      ? (roll < 0.65 ? 'count_wallet' : 'change')
+      : (!isHard100
+        ? (roll < 0.4 ? 'count_wallet' : (roll < 0.8 ? 'change' : 'two_items'))
+        : (roll < 0.3 ? 'count_wallet' : (roll < 0.75 ? 'change' : 'two_items')));
+
+    const stage = document.createElement('div');
+    stage.className = 'money-shop-stage pop-in';
+
+    let correctAnswer = 0;
+    let trapValue = 0;
+    let promptText = '';
+    let voiceText = '';
+    let helperText = '';
+    let shortTrapVoice = '';
+
+    const renderMoneyToken = (val) => {
+      if (val >= 5) {
+        const cls = val >= 20 ? 'bill-20' : (val === 10 ? 'bill-10' : 'bill-5');
+        return `<div class="paper-bill ${cls}" data-val="${val}"><span class="bill-corner">¥${val}</span><span class="bill-main">${val}元</span></div>`;
+      }
+      return `<div class="metal-coin coin-${val}" data-val="${val}"><span class="coin-main">${val}元</span></div>`;
+    };
+
+    if (mode === 'count_wallet') {
+      const walletPools = isEasy10
+        ? [
+            [5, 1, 1], [5, 2, 1], [5, 2, 2], [2, 2, 1, 1], [5, 5], [5, 1, 1, 1]
+          ]
+        : (!isHard100
+          ? [
+              [10, 5, 1], [10, 2, 2, 1], [10, 5, 2], [5, 5, 2, 1], [10, 5, 2, 1], [10, 2, 1, 1]
+            ]
+          : [
+              [20, 10, 5, 2], [10, 10, 5, 2, 1], [20, 5, 2, 2], [20, 10, 2, 1], [10, 5, 5, 2, 1]
+            ]);
+      const notes = walletPools[Math.floor(Math.random() * walletPools.length)];
+      correctAnswer = notes.reduce((s, n) => s + n, 0);
+      trapValue = notes.length; // 常见陷阱：数成张数/个数而不是面额总和！
+
+      promptText = `小超市点钞：数一数钱包里的纸币和硬币，合起来一共是多少元？`;
+      voiceText = `数一数钱包里的钱币，先看大面额纸币，再加小硬币，合起来一共是多少元？`;
+      helperText = `💡 点钞秘诀：按面额从大到小加起来：<strong>${notes.join(' + ')} = <span class="ktest-step-reveal">?</span></strong> 元（不是数张数哦）`;
+      shortTrapVoice = '要按面额相加哦';
+
+      stage.innerHTML = `
+        <div class="money-card">
+          <div class="money-card-header">👛 小小收银员 · 点钞挑战（点击钱币可听面额）</div>
+          <div class="wallet-notes-wrap">
+            ${notes.map(n => renderMoneyToken(n)).join('')}
+          </div>
+          <div class="money-equation-bar">
+            <span>合计算式：${notes.join('元 + ')}元 = </span>
+            <span class="money-target-box ktest-target-slot mystery-pulse">?</span>
+            <span>元</span>
+          </div>
+          <div class="ktest-helper-pill">${helperText}</div>
+        </div>
+      `;
+    } else if (mode === 'change') {
+      const paid = isEasy10 ? 10 : (!isHard100 ? (Math.random() < 0.65 ? 20 : 15) : (Math.random() < 0.5 ? 20 : 50));
+      const price = isEasy10
+        ? (Math.floor(Math.random() * 6) + 3) // 3~8
+        : (paid === 15
+          ? (Math.floor(Math.random() * 6) + 7) // 7~12
+          : (paid === 20
+            ? (Math.floor(Math.random() * 11) + 7) // 7~17
+            : (Math.floor(Math.random() * 20) + 18))); // 18~37
+
+      correctAnswer = paid - price;
+      trapValue = paid + price; // 经典陷阱：找零用了加法或看反十位
+
+      const paidNotes = paid === 15 ? [10, 5] : (paid === 50 ? [20, 20, 10] : [paid]);
+      promptText = `超市找零：买一个 ${price} 元的${item.name}${item.emoji}，付了 ${paid} 元，收银员阿姨应该找回几元？`;
+      voiceText = `超市买东西：${item.name}要${price}元，付了${paid}元，应该找回多少元？`;
+      helperText = `💡 找零公式：付出的钱 − 商品价格 = 找回的钱，即 <strong>${paid} − ${price} = <span class="ktest-step-reveal">?</span></strong> 元`;
+      shortTrapVoice = '找零要用减法哦';
+
+      stage.innerHTML = `
+        <div class="money-card">
+          <div class="shop-scene-row">
+            <div class="shop-item-card">
+              <div class="shop-item-emoji">${item.emoji}</div>
+              <div class="shop-item-name">${item.name}</div>
+              <div class="shop-price-tag">售价 ¥<strong>${price}</strong> 元</div>
+            </div>
+            <div class="shop-arrow-col">
+              <div class="paid-label">付款 ¥${paid} 元</div>
+              <div class="paid-bills-mini">${paidNotes.map(n => renderMoneyToken(n)).join('')}</div>
+            </div>
+            <div class="shop-change-card">
+              <div class="change-title">🪙 应找回零钱</div>
+              <div class="money-target-box ktest-target-slot mystery-pulse">?</div>
+              <div class="change-unit">元</div>
+            </div>
+          </div>
+          <div class="ktest-helper-pill">${helperText}</div>
+        </div>
+      `;
+    } else {
+      const item2 = items[(items.indexOf(item) + 2) % items.length];
+      const p1 = Math.floor(Math.random() * 7) + 5; // 5~11
+      const p2 = Math.floor(Math.random() * 7) + 4; // 4~10
+      correctAnswer = p1 + p2;
+      trapValue = Math.abs(p1 - p2);
+
+      promptText = `超市购物：买一个 ${p1} 元的${item.name}${item.emoji}和一个 ${p2} 元的${item2.name}${item2.emoji}，一共要付多少元？`;
+      voiceText = `买一个${p1}元的${item.name}，再买一个${p2}元的${item2.name}，合起来一共要付多少元？`;
+      helperText = `💡 购物合计：把两件商品的价格加起来：<strong>${p1} + ${p2} = <span class="ktest-step-reveal">?</span></strong> 元`;
+      shortTrapVoice = '买两样要用加法哦';
+
+      stage.innerHTML = `
+        <div class="money-card">
+          <div class="shop-scene-row">
+            <div class="shop-item-card">
+              <div class="shop-item-emoji">${item.emoji}</div>
+              <div class="shop-item-name">${item.name}</div>
+              <div class="shop-price-tag">¥<strong>${p1}</strong> 元</div>
+            </div>
+            <div class="shop-plus-sign">+</div>
+            <div class="shop-item-card">
+              <div class="shop-item-emoji">${item2.emoji}</div>
+              <div class="shop-item-name">${item2.name}</div>
+              <div class="shop-price-tag">¥<strong>${p2}</strong> 元</div>
+            </div>
+            <div class="shop-plus-sign">=</div>
+            <div class="shop-change-card">
+              <div class="change-title">🧾 共需付款</div>
+              <div class="money-target-box ktest-target-slot mystery-pulse">?</div>
+              <div class="change-unit">元</div>
+            </div>
+          </div>
+          <div class="ktest-helper-pill">${helperText}</div>
+        </div>
+      `;
+    }
+
+    this.questionTextEl.textContent = promptText;
+
+    this.currentQuestion = {
+      type: 'money',
+      answer: correctAnswer,
+      audioPrompt: voiceText,
+      praiseText: helperText.replace(/<[^>]+>/g, ''),
+      trapValue,
+      trapHint: helperText.replace(/<[^>]+>/g, ''),
+      shortTrapVoice
+    };
+
+    stage.querySelectorAll('.paper-bill, .metal-coin').forEach(tok => {
+      tok.addEventListener('click', () => {
+        window.soundManager.playPop();
+        window.soundManager.speak(`${tok.dataset.val}元`);
+      });
+    });
+
+    this.questionZoneEl.appendChild(stage);
+    const options = this.generateChoices(correctAnswer, Math.max(1, correctAnswer - 5), correctAnswer + 6, 4);
+    this.renderOptions(options, correctAnswer);
+  }
+
+  // ================= 新增题型 10: 移多补少与对半平分 (经典幼小衔接奥数题：给几个就一样多 / 双倍与平分) =================
+  generateEqualShareQuestion() {
+    const isEasy10 = this.difficulty === '10';
+    const isHard100 = this.difficulty === '100';
+
+    // 模式 A (65%): 移多补少（哥哥有 A 颗糖，妹妹有 B 颗，哥哥给妹妹几颗两人就一样多？ 答案=(A-B)/2，陷阱=A-B）
+    // 模式 B (35%): 对半平分（把 2N 个草莓平均分给 2 个小朋友，每人分几个？）
+    const useGiveAndTake = isEasy10 ? (Math.random() < 0.45) : (Math.random() < 0.72);
+
+    const stage = document.createElement('div');
+    stage.className = 'halves-stage-card pop-in';
+
+    let correctAnswer = 0;
+    let trapValue = 0;
+    let promptText = '';
+    let voiceText = '';
+    let helperText = '';
+    let shortTrapVoice = '';
+
+    if (useGiveAndTake) {
+      const giveCnt = isEasy10
+        ? (Math.floor(Math.random() * 2) + 1) // 1~2 (diff 2~4)
+        : (!isHard100
+          ? (Math.floor(Math.random() * 3) + 2) // 2~4 (diff 4~8)
+          : (Math.floor(Math.random() * 4) + 3)); // 3~6 (diff 6~12)
+      const diff = giveCnt * 2;
+      const small = isEasy10 ? (Math.floor(Math.random() * 3) + 2) : (Math.floor(Math.random() * 5) + 3);
+      const big = small + diff;
+
+      correctAnswer = giveCnt;
+      trapValue = diff; // 经典奥数第一大坑：直接拿多出来的差数全给对方！
+
+      promptText = `移多补少：小兔🐰有 ${big} 颗糖🍬，小熊🐻有 ${small} 颗，小兔给小熊几颗，两人就一样多？`;
+      voiceText = `移多补少问题：小兔有${big}颗糖，小熊有${small}颗。小兔多出了${diff}颗，把多出来的分一半给小熊，要给几颗？`;
+      helperText = `💡 移多补少口诀：先算多出 <strong>${big} − ${small} = ${diff}</strong> 颗，再把多出的 <strong>${diff} 颗平分一半</strong>，给 <strong><span class="ktest-step-reveal">?</span></strong> 颗就一样多（都是 ${small + giveCnt} 颗）！`;
+      shortTrapVoice = '多出的要分一半哦';
+
+      const renderCandies = (cnt, extraStartIdx = 99, splitGiveIdx = 99) => {
+        const arr = [];
+        for (let i = 1; i <= cnt; i++) {
+          const isExtra = i > extraStartIdx;
+          const isGive = i > splitGiveIdx;
+          arr.push(`<span class="candy-dot ${isGive ? 'give-away-candy' : (isExtra ? 'keep-extra-candy' : '')}">🍬</span>`);
+        }
+        return arr.join('');
+      };
+
+      stage.innerHTML = `
+        <div class="halves-card">
+          <div class="halves-compare-row">
+            <div class="halves-box">
+              <div class="halves-avatar">🐰 小兔（<strong>${big}</strong> 颗）</div>
+              <div class="halves-candies">${renderCandies(big, small, small + giveCnt)}</div>
+              <div class="halves-note">比小熊多 <strong>${diff}</strong> 颗（橙色 ${giveCnt} 颗送给小熊）</div>
+            </div>
+            <div class="halves-transfer-arrow" id="halves-demo-btn" title="点击演示移多补少">
+              <span>🎁 送出</span>
+              <div class="money-target-box ktest-target-slot mystery-pulse">?</div>
+              <span>颗 ➡️</span>
+            </div>
+            <div class="halves-box">
+              <div class="halves-avatar">🐻 小熊（<strong>${small}</strong> 颗）</div>
+              <div class="halves-candies">${renderCandies(small)}</div>
+              <div class="halves-note">收到后两人都有 <strong>${small + giveCnt}</strong> 颗</div>
+            </div>
+          </div>
+          <div class="ktest-helper-pill">${helperText}</div>
+        </div>
+      `;
+    } else {
+      const half = isEasy10
+        ? (Math.floor(Math.random() * 4) + 2) // 2~5 (total 4~10)
+        : (!isHard100
+          ? (Math.floor(Math.random() * 5) + 5) // 5~9 (total 10~18)
+          : (Math.floor(Math.random() * 6) + 7)); // 7~12 (total 14~24)
+      const total = half * 2;
+      correctAnswer = half;
+      trapValue = total - 2;
+
+      promptText = `对半平分：盘子里有 ${total} 颗红草莓🍓，平均分给 2 个小朋友，每人分到几颗？`;
+      voiceText = `把${total}颗红草莓平均分给两个小朋友，两边一样多，每人分到几颗？`;
+      helperText = `💡 对半平分：因为 <strong>${half} + ${half} = ${total}</strong>，所以 ${total} 分成相等的两份，每份是 <strong><span class="ktest-step-reveal">?</span></strong> 颗！`;
+      shortTrapVoice = '两份要一样多哦';
+
+      const plateDots = Array.from({ length: half }, () => '<span class="candy-dot">🍓</span>').join('');
+      stage.innerHTML = `
+        <div class="halves-card">
+          <div class="halves-total-banner">🍓 总共 <strong>${total}</strong> 颗草莓，平均分成相等的 2 盘：</div>
+          <div class="halves-compare-row">
+            <div class="halves-box">
+              <div class="halves-avatar">👦 第一盘</div>
+              <div class="halves-candies">${plateDots}</div>
+              <div class="halves-note">分到 <strong class="ktest-step-reveal">?</strong> 颗</div>
+            </div>
+            <div class="halves-transfer-arrow">
+              <span>⚖️ 一样多</span>
+              <div class="money-target-box ktest-target-slot mystery-pulse">?</div>
+              <span>颗/人</span>
+            </div>
+            <div class="halves-box">
+              <div class="halves-avatar">👧 第二盘</div>
+              <div class="halves-candies">${plateDots}</div>
+              <div class="halves-note">分到 <strong class="ktest-step-reveal">?</strong> 颗</div>
+            </div>
+          </div>
+          <div class="ktest-helper-pill">${helperText}</div>
+        </div>
+      `;
+    }
+
+    this.questionTextEl.textContent = promptText;
+
+    this.currentQuestion = {
+      type: 'halves',
+      answer: correctAnswer,
+      audioPrompt: voiceText,
+      praiseText: helperText.replace(/<[^>]+>/g, ''),
+      trapValue,
+      trapHint: helperText.replace(/<[^>]+>/g, ''),
+      shortTrapVoice
+    };
+
+    this.questionZoneEl.appendChild(stage);
+    const options = this.generateChoices(correctAnswer, Math.max(1, correctAnswer - 3), correctAnswer + 5, 4);
+    this.renderOptions(options, correctAnswer);
+  }
+
+  // ================= 新增题型 11: 横竖数阵与九宫幻方 (十字数阵 / 三阶幻方行和列和相等推理) =================
+  generateGridPuzzleQuestion() {
+    const isEasy10 = this.difficulty === '10';
+    const isHard100 = this.difficulty === '100';
+
+    const stage = document.createElement('div');
+    stage.className = 'gridpuzzle-stage pop-in';
+
+    // 基础/进阶采用经典「十字五格数阵」（横着3格之和 = 竖着3格之和 = 目标和 S）；高阶 50% 采用「3x3 九宫数阵」
+    const use3x3 = isHard100 && Math.random() < 0.55;
+
+    let correctAnswer = 0;
+    let trapValue = 0;
+    let promptText = '';
+    let voiceText = '';
+    let helperText = '';
+
+    if (!use3x3) {
+      const center = isEasy10 ? (Math.floor(Math.random() * 3) + 2) : (Math.floor(Math.random() * 4) + 3);
+      const left = isEasy10 ? (Math.floor(Math.random() * 3) + 1) : (Math.floor(Math.random() * 5) + 2);
+      const right = isEasy10 ? (Math.floor(Math.random() * 3) + 2) : (Math.floor(Math.random() * 5) + 3);
+      const lineSum = left + center + right;
+      const top = Math.max(1, Math.min(lineSum - center - 1, Math.floor(Math.random() * (lineSum - center - 2)) + 1));
+      const bottom = lineSum - center - top;
+
+      correctAnswer = bottom;
+      trapValue = lineSum - top; // 经典陷阱：忘了减去正中间的公共格！
+
+      promptText = `十字数阵：横着3格相加、竖着3格相加都等于 ${lineSum}，最下面问号填几？`;
+      voiceText = `十字数阵推理：横着三格、竖着三格加起来都等于${lineSum}。看竖着一列，${top}加${center}再加几等于${lineSum}？`;
+      helperText = `💡 数阵秘诀：竖列三格相加 = <strong>${lineSum}</strong>，已知上面 <strong>${top}</strong> 和中间 <strong>${center}</strong>（${top}+${center}=${top + center}），所以问号 = <strong>${lineSum} − ${top + center} = <span class="ktest-step-reveal">?</span></strong>`;
+
+      stage.innerHTML = `
+        <div class="gridpuzzle-card">
+          <div class="grid-sum-badge">🎯 目标：横行 3 格之和 = 竖列 3 格之和 = <strong>${lineSum}</strong></div>
+          <div class="cross-grid-board">
+            <div class="grid-cell empty-cell"></div>
+            <div class="grid-cell">${top}</div>
+            <div class="grid-cell empty-cell"></div>
+
+            <div class="grid-cell">${left}</div>
+            <div class="grid-cell center-shared-cell" title="横竖共用的中心格">${center}</div>
+            <div class="grid-cell">${right}</div>
+
+            <div class="grid-cell empty-cell"></div>
+            <div class="grid-cell target-grid-cell ktest-target-slot mystery-pulse">?</div>
+            <div class="grid-cell empty-cell"></div>
+          </div>
+          <div class="ktest-helper-pill">${helperText}</div>
+        </div>
+      `;
+    } else {
+      // 标准九宫幻方或其等差变形（每行每列之和相等）
+      const k = Math.floor(Math.random() * 3); // 0, 1, 2 偏移
+      const base = [
+        [2 + k, 9 + k, 4 + k],
+        [7 + k, 5 + k, 3 + k],
+        [6 + k, 1 + k, 8 + k]
+      ];
+      const lineSum = 15 + 3 * k;
+      const targetCandidates = [
+        { r: 0, c: 2 }, { r: 1, c: 2 }, { r: 2, c: 1 }, { r: 2, c: 2 }
+      ];
+      const pick = targetCandidates[Math.floor(Math.random() * targetCandidates.length)];
+      correctAnswer = base[pick.r][pick.c];
+      const rowOthers = base[pick.r].filter((_, idx) => idx !== pick.c);
+      const partialSum = rowOthers[0] + rowOthers[1];
+      trapValue = Math.max(1, lineSum - rowOthers[0]);
+
+      promptText = `九宫幻方：每一横行、每一竖列的 3 个数相加都等于 ${lineSum}，问号格填几？`;
+      voiceText = `九宫幻方挑战：每行每列三个数加起来都等于${lineSum}。看问号那一行，${rowOthers[0]}加${rowOthers[1]}等于${partialSum}，再加几等于${lineSum}？`;
+      helperText = `💡 幻方规律：每行三数之和 = <strong>${lineSum}</strong>，问号所在行已有 <strong>${rowOthers[0]} + ${rowOthers[1]} = ${partialSum}</strong>，所以问号 = <strong>${lineSum} − ${partialSum} = <span class="ktest-step-reveal">?</span></strong>`;
+
+      const cellsHtml = [];
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          const isT = r === pick.r && c === pick.c;
+          const inTargetRow = r === pick.r;
+          cellsHtml.push(`
+            <div class="grid-cell ${isT ? 'target-grid-cell ktest-target-slot mystery-pulse' : (inTargetRow ? 'highlight-row-cell' : '')}">
+              ${isT ? '?' : base[r][c]}
+            </div>
+          `);
+        }
+      }
+
+      stage.innerHTML = `
+        <div class="gridpuzzle-card">
+          <div class="grid-sum-badge">🎯 九宫幻方：每横行、每竖列 3 数之和都等于 <strong>${lineSum}</strong></div>
+          <div class="grid3x3-board">
+            ${cellsHtml.join('')}
+          </div>
+          <div class="ktest-helper-pill">${helperText}</div>
+        </div>
+      `;
+    }
+
+    this.questionTextEl.textContent = promptText;
+
+    this.currentQuestion = {
+      type: 'gridpuzzle',
+      answer: correctAnswer,
+      audioPrompt: voiceText,
+      praiseText: helperText.replace(/<[^>]+>/g, ''),
+      trapValue,
+      trapHint: helperText.replace(/<[^>]+>/g, ''),
+      shortTrapVoice: '先加已知两格再相减哦'
+    };
+
+    this.questionZoneEl.appendChild(stage);
+    const options = this.generateChoices(correctAnswer, Math.max(1, correctAnswer - 4), correctAnswer + 5, 4);
+    this.renderOptions(options, correctAnswer);
+  }
+
   // ================= 9. 60秒极速挑战模式 (计时闯关、连击加分与最高分纪录) =================
   startSpeedrun() {
     this.clearPendingTimers();
@@ -3700,18 +4563,16 @@ class MathGameApp {
         }
       }
 
-      // K班真题特训：把数键圆圈、一图四式、三格数塔或压轴等式里的问号替换为正确答案
-      if (qType === 'ktest') {
-        this.questionZoneEl.querySelectorAll('.ktest-target-slot').forEach(slot => {
-          slot.textContent = correctValue;
-          slot.classList.remove('mystery-pulse');
-          slot.classList.add('filled-correct');
-        });
-        this.questionZoneEl.querySelectorAll('.ktest-step-reveal').forEach(rev => {
-          rev.textContent = correctValue;
-          rev.classList.add('filled-correct');
-        });
-      }
+      // 通用与真题特训：把题目中的目标问号格与步骤提示替换为正确答案
+      this.questionZoneEl.querySelectorAll('.ktest-target-slot').forEach(slot => {
+        slot.textContent = correctValue;
+        slot.classList.remove('mystery-pulse');
+        slot.classList.add('filled-correct');
+      });
+      this.questionZoneEl.querySelectorAll('.ktest-step-reveal').forEach(rev => {
+        rev.textContent = correctValue;
+        rev.classList.add('filled-correct');
+      });
 
       this.streak++;
       this.questionsSolved++;

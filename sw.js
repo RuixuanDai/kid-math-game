@@ -1,5 +1,5 @@
 // 童趣数学小王国 - PWA Service Worker (Network-First 实时热更新 + 断网离线畅玩兜底)
-const CACHE_NAME = 'kid-math-pwa-v20261106-settings-v7';
+const CACHE_NAME = 'kid-math-pwa-v20261107-games-v8';
 const CORE_ASSETS = [
   './',
   './index.html',
