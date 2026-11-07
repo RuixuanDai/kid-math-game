@@ -1,11 +1,13 @@
-// 6岁儿童数学小王国 - 智能自适应闯关旗舰版
-// 全自动科学编排课程牌组：融合 K班测试真题5大核心题型 + 高阶进退位逆向算术 + 双算式天平 + 十格阵凑十破十 + 阶梯数感规律 + 3D空间积木 + 指针时钟推算 + 群组乘法启蒙
-// 彻底隐藏手动题型与低难度切换，内置防重签名池、连对动态升阶与错题靶向复现引擎
+// 6岁儿童数学小王国 - 智能自适应与自定义题库旗舰版
+// 支持「智能自适应闯关」与「⚙️ 设置中心自定义题型/难度/全屏/音效/家长防改锁」，精简答题后语音反馈，节奏轻快不拖沓
 
 class MathGameApp {
   constructor() {
     this.currentMode = 'smart'; // 'smart' | 'speedrun'
-    this.difficulty = '20';     // 仅在 '20' (进阶) 与 '100' (高阶挑战) 之间自适应切换，彻底杜绝 '10' 简单幼童题
+    this.difficulty = '20';     // 当前题目实际运行难度: '10' | '20' | '100'
+    this.difficultySetting = 'auto'; // 设置项: 'auto' | '10' | '20' | '100'
+    this.parentLockEnabled = false;
+    this.settingsChangedPending = false;
     this.ktestSubType = 'all';
     this.lastKTestType = null;
     this.stars = parseInt(localStorage.getItem('kid_math_stars') || '8', 10);
@@ -24,25 +26,29 @@ class MathGameApp {
     this.transitionSeq = 0;
     this.lastClockMinute = null;
 
-    // 智能自适应选题引擎状态
+    // 16类全覆盖课程目录（支持设置页自由勾选）
     this.curriculumCatalog = [
-      { id: 'ktest:q1', mode: 'ktest', subType: 'q1', label: '凑十数键', tag: '🎓 真题特训', sprintOk: true },
-      { id: 'ktest:q2', mode: 'ktest', subType: 'q2', label: '连环分合', tag: '🎓 真题特训', sprintOk: true },
-      { id: 'ktest:q3', mode: 'ktest', subType: 'q3', label: '一图四式', tag: '🎓 真题特训', sprintOk: false },
-      { id: 'ktest:q4', mode: 'ktest', subType: 'q4', label: '三格数塔', tag: '🎓 真题特训', sprintOk: true },
-      { id: 'ktest:q5a', mode: 'ktest', subType: 'q5a', label: '多步推理', tag: '🎓 真题特训', sprintOk: true },
-      { id: 'ktest:q5b', mode: 'ktest', subType: 'q5b', label: '双边等式', tag: '🎓 真题特训', sprintOk: true },
-      { id: 'arithmetic:blank', mode: 'arithmetic', subType: 'blank', label: '逆向未知数', tag: '🍩 进阶算术', sprintOk: true },
-      { id: 'arithmetic:chain', mode: 'arithmetic', subType: 'chain', label: '连加连减与两位数', tag: '🍩 高阶算术', sprintOk: true },
-      { id: 'comparison:expr', mode: 'comparison', subType: 'expr', label: '双算式天平', tag: '⚖️ 算式对比', sprintOk: true },
-      { id: 'comparison:twodigit', mode: 'comparison', subType: 'twodigit', label: '数位与整十对比', tag: '⚖️ 数位挑战', sprintOk: true },
-      { id: 'tenframes:make10', mode: 'tenframes', subType: 'make10', label: '双盒凑十进位', tag: '🧪 数感建模', sprintOk: true },
-      { id: 'tenframes:break10', mode: 'tenframes', subType: 'break10', label: '双盒破十退位', tag: '🧪 数感建模', sprintOk: true },
-      { id: 'patterns:numeric', mode: 'patterns', subType: 'numeric', label: '阶梯数字规律', tag: '🚂 逻辑归纳', sprintOk: true },
-      { id: 'blocks:3d', mode: 'blocks', subType: '3d', label: '3D遮挡数积木', tag: '🧩 空间推理', sprintOk: false },
-      { id: 'clocks:time', mode: 'clocks', subType: 'time', label: '钟表认读与推算', tag: '⏰ 时间认知', sprintOk: true },
-      { id: 'counting:grouped', mode: 'counting', subType: 'grouped', label: '群组倍增数数', tag: '🍓 乘法启蒙', sprintOk: true }
+      { id: 'ktest:q1', group: 'ktest', icon: '🔗', mode: 'ktest', subType: 'q1', label: '凑十数键', tag: '🎓 真题特训', sprintOk: true },
+      { id: 'ktest:q2', group: 'ktest', icon: '🌿', mode: 'ktest', subType: 'q2', label: '连环分合', tag: '🎓 真题特训', sprintOk: true },
+      { id: 'ktest:q3', group: 'ktest', icon: '🧮', mode: 'ktest', subType: 'q3', label: '一图四式', tag: '🎓 真题特训', sprintOk: false },
+      { id: 'ktest:q4', group: 'ktest', icon: '🗼', mode: 'ktest', subType: 'q4', label: '三格数塔', tag: '🎓 真题特训', sprintOk: true },
+      { id: 'ktest:q5a', group: 'ktest', icon: '🧠', mode: 'ktest', subType: 'q5a', label: '多步文字推理', tag: '🎓 真题特训', sprintOk: true },
+      { id: 'ktest:q5b', group: 'ktest', icon: '⚖️', mode: 'ktest', subType: 'q5b', label: '双边等式天平', tag: '🎓 真题特训', sprintOk: true },
+      { id: 'arithmetic:blank', group: 'calc', icon: '❓', mode: 'arithmetic', subType: 'blank', label: '逆向未知数', tag: '🍩 进阶算术', sprintOk: true },
+      { id: 'arithmetic:chain', group: 'calc', icon: '🚀', mode: 'arithmetic', subType: 'chain', label: '连加连减与两位数', tag: '🍩 高阶算术', sprintOk: true },
+      { id: 'comparison:expr', group: 'calc', icon: '🐊', mode: 'comparison', subType: 'expr', label: '双算式比大小', tag: '⚖️ 算式对比', sprintOk: true },
+      { id: 'comparison:twodigit', group: 'calc', icon: '🔢', mode: 'comparison', subType: 'twodigit', label: '数位与整十对比', tag: '⚖️ 数位挑战', sprintOk: true },
+      { id: 'tenframes:make10', group: 'calc', icon: '🔴', mode: 'tenframes', subType: 'make10', label: '十格阵凑十', tag: '🧪 数感建模', sprintOk: true },
+      { id: 'tenframes:break10', group: 'calc', icon: '🟢', mode: 'tenframes', subType: 'break10', label: '十格阵破十', tag: '🧪 数感建模', sprintOk: true },
+      { id: 'counting:grouped', group: 'calc', icon: '🍓', mode: 'counting', subType: 'grouped', label: '群组倍增快数', tag: '🍓 乘法启蒙', sprintOk: true },
+      { id: 'patterns:numeric', group: 'visual', icon: '🚂', mode: 'patterns', subType: 'numeric', label: '数字规律火车', tag: '🚂 逻辑归纳', sprintOk: true },
+      { id: 'blocks:3d', group: 'visual', icon: '🧩', mode: 'blocks', subType: '3d', label: '3D遮挡数积木', tag: '🧩 空间推理', sprintOk: false },
+      { id: 'clocks:time', group: 'visual', icon: '⏰', mode: 'clocks', subType: 'time', label: '钟表认读与推算', tag: '⏰ 时间认知', sprintOk: true }
     ];
+
+    this.enabledSkillIds = new Set(this.curriculumCatalog.map(s => s.id));
+    this.loadSettings();
+
     this.questionDeck = [];
     this.sprintDeck = [];
     this.mistakeReviewQueue = []; // [{ skillId, dueIn }]
@@ -85,8 +91,40 @@ class MathGameApp {
     this.initDOMElements();
     this.bindEvents();
     this.initPWA();
+    this.renderSettingsUI();
     this.updateStatsUI();
     this.startSmartAdventure();
+  }
+
+  loadSettings() {
+    try {
+      const raw = localStorage.getItem('kid_math_settings_v1');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (['auto', '10', '20', '100'].includes(parsed.difficultySetting)) {
+        this.difficultySetting = parsed.difficultySetting;
+      }
+      if (typeof parsed.parentLockEnabled === 'boolean') {
+        this.parentLockEnabled = parsed.parentLockEnabled;
+      }
+      if (Array.isArray(parsed.enabledSkills)) {
+        const validIds = new Set(this.curriculumCatalog.map(s => s.id));
+        const filtered = parsed.enabledSkills.filter(id => validIds.has(id));
+        if (filtered.length > 0) {
+          this.enabledSkillIds = new Set(filtered);
+        }
+      }
+    } catch (_) {}
+  }
+
+  saveSettings() {
+    try {
+      localStorage.setItem('kid_math_settings_v1', JSON.stringify({
+        difficultySetting: this.difficultySetting,
+        parentLockEnabled: this.parentLockEnabled,
+        enabledSkills: Array.from(this.enabledSkillIds)
+      }));
+    } catch (_) {}
   }
 
   initDOMElements() {
@@ -99,6 +137,9 @@ class MathGameApp {
     this.mascotMsgEl = document.getElementById('mascot-message');
     this.smartStageBadgeEl = document.getElementById('smart-stage-badge');
     this.sprintToggleBtn = document.getElementById('sprint-toggle-btn');
+    this.settingsBtn = document.getElementById('settings-btn');
+    this.settingsModal = document.getElementById('settings-modal');
+    this.parentGateModal = document.getElementById('parent-gate-modal');
     this.gashaponModal = document.getElementById('gashapon-modal');
     this.stickerBookModal = document.getElementById('sticker-book-modal');
     this.parentGuideModal = document.getElementById('parent-guide-modal');
@@ -150,6 +191,14 @@ class MathGameApp {
       });
     }
 
+    // 顶栏 ⚙️ 设置 按钮
+    if (this.settingsBtn) {
+      this.settingsBtn.addEventListener('click', () => {
+        window.soundManager.playPop();
+        this.openSettingsRequest();
+      });
+    }
+
     // 朗读题目
     const speakBtn = document.getElementById('speak-btn');
     if (speakBtn) {
@@ -169,7 +218,7 @@ class MathGameApp {
         window.soundManager.playPop();
         const tips = [
           '点喇叭按钮可以再听一遍题目哦！',
-          '连续答对 3 题会自动晋级高阶学霸挑战，赢取满满小金星！',
+          '右上角设置里可以自由挑选想练的题型、难度和全屏模式！',
           '遇到难题别着急，用凑十法、破十法和透视镜试试看！',
           '每集齐 3 颗小金星，就能去扭蛋机抽一次神秘萌宠！'
         ];
@@ -197,26 +246,32 @@ class MathGameApp {
       });
     }
 
-    // 家长指导
+    // 设置页内的「启蒙导学指南」入口
     const guideBtn = document.getElementById('parent-guide-btn');
     if (guideBtn) {
       guideBtn.addEventListener('click', () => {
         window.soundManager.playPop();
+        if (this.settingsModal) this.settingsModal.classList.remove('active');
         if (this.parentGuideModal) this.parentGuideModal.classList.add('active');
       });
     }
 
     // 弹窗关闭按钮与遮罩背景点击关闭
+    const handleModalDismiss = (modal) => {
+      if (!modal) return;
+      modal.classList.remove('active');
+      if (modal.id === 'speedrun-summary-modal' && !this.speedrunActive) {
+        this.exitSpeedrunToSmart();
+      } else if (modal.id === 'settings-modal' && this.settingsChangedPending) {
+        this.settingsChangedPending = false;
+        this.generateQuestion();
+      }
+    };
+
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         window.soundManager.playPop();
-        const modal = btn.closest('.modal-overlay');
-        if (modal) {
-          modal.classList.remove('active');
-          if (modal.id === 'speedrun-summary-modal' && !this.speedrunActive) {
-            this.exitSpeedrunToSmart();
-          }
-        }
+        handleModalDismiss(btn.closest('.modal-overlay'));
       });
     });
 
@@ -224,10 +279,64 @@ class MathGameApp {
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
           window.soundManager.playPop();
-          overlay.classList.remove('active');
-          if (overlay.id === 'speedrun-summary-modal' && !this.speedrunActive) {
-            this.exitSpeedrunToSmart();
-          }
+          handleModalDismiss(overlay);
+        }
+      });
+    });
+
+    // 设置页底部「保存设置并出新题」按钮
+    const applySettingsBtn = document.getElementById('settings-apply-btn');
+    if (applySettingsBtn) {
+      applySettingsBtn.addEventListener('click', () => {
+        window.soundManager.playPop();
+        if (this.settingsModal) this.settingsModal.classList.remove('active');
+        this.settingsChangedPending = false;
+        this.generateQuestion();
+      });
+    }
+
+    // 设置页难度档位卡片点击
+    document.querySelectorAll('.settings-diff-card').forEach(card => {
+      card.addEventListener('click', () => {
+        window.soundManager.playPop();
+        const diff = card.dataset.diff;
+        if (['auto', '10', '20', '100'].includes(diff)) {
+          this.difficultySetting = diff;
+          this.settingsChangedPending = true;
+          this.saveSettings();
+          this.renderSettingsUI();
+        }
+      });
+    });
+
+    // 设置页题型快捷预设按钮点击
+    document.querySelectorAll('.settings-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window.soundManager.playPop();
+        const preset = btn.dataset.preset;
+        let targetIds = [];
+        let tipMsg = '';
+        if (preset === 'all') {
+          targetIds = this.curriculumCatalog.map(s => s.id);
+        } else if (preset === 'ktest') {
+          targetIds = this.curriculumCatalog.filter(s => s.group === 'ktest').map(s => s.id);
+        } else if (preset === 'calc') {
+          targetIds = this.curriculumCatalog.filter(s => s.group === 'calc').map(s => s.id);
+        } else if (preset === 'visual') {
+          targetIds = this.curriculumCatalog.filter(s => s.group === 'visual').map(s => s.id);
+        } else if (preset === 'single') {
+          const keepId = (this.currentSkill && this.currentSkill.id) || this.curriculumCatalog[0].id;
+          targetIds = [keepId];
+          tipMsg = '🎯 已仅保留当前 1 项题型！你可直接保存单练，或继续勾选任意想练的题型';
+        }
+        if (targetIds.length > 0) {
+          this.enabledSkillIds = new Set(targetIds);
+          this.questionDeck = [];
+          this.sprintDeck = [];
+          this.settingsChangedPending = true;
+          this.saveSettings();
+          this.showSettingsTip(tipMsg);
+          this.renderSettingsUI();
         }
       });
     });
@@ -279,58 +388,80 @@ class MathGameApp {
       });
     }
 
-    // 声音、AI 在线语音角色切换与全屏
+    // 设置页：音效、读题开关、语音角色切换、家长锁与全屏
     const soundToggle = document.getElementById('sound-toggle');
     if (soundToggle) {
       soundToggle.addEventListener('click', () => {
-        window.soundManager.soundEnabled = !window.soundManager.soundEnabled;
-        soundToggle.textContent = window.soundManager.soundEnabled ? '🔊 声音' : '🔇 静音';
-        soundToggle.classList.toggle('off', !window.soundManager.soundEnabled);
+        const next = window.soundManager.setSoundEnabled(!window.soundManager.soundEnabled);
+        if (next) window.soundManager.playPop();
+        this.syncQuickSettingsTiles();
       });
     }
 
     const voiceToggle = document.getElementById('voice-toggle');
-    const syncVoiceUI = () => {
-      if (voiceToggle) {
-        voiceToggle.textContent = window.soundManager.voiceEnabled ? '🗣️ 读题开' : '🤐 读题关';
-        voiceToggle.classList.toggle('off', !window.soundManager.voiceEnabled);
-      }
-    };
-    syncVoiceUI();
-
     if (voiceToggle) {
       voiceToggle.addEventListener('click', () => {
+        window.soundManager.playPop();
         const nowEnabled = window.soundManager.setVoiceEnabled(!window.soundManager.voiceEnabled);
-        syncVoiceUI();
+        this.syncQuickSettingsTiles();
         if (nowEnabled) {
-          window.soundManager.speak('语音朗读打开啦！');
+          window.soundManager.speak('读题已开启！');
         } else {
           window.soundManager.stopSpeaking();
         }
       });
     }
 
+    const voiceRoleBtn = document.getElementById('voice-role-btn');
+    if (voiceRoleBtn) {
+      voiceRoleBtn.addEventListener('click', () => {
+        window.soundManager.playPop();
+        window.soundManager.cycleVoice();
+        this.syncQuickSettingsTiles();
+      });
+    }
+
+    const parentLockToggle = document.getElementById('parent-lock-toggle');
+    if (parentLockToggle) {
+      parentLockToggle.addEventListener('click', () => {
+        window.soundManager.playPop();
+        this.parentLockEnabled = !this.parentLockEnabled;
+        this.saveSettings();
+        this.syncQuickSettingsTiles();
+        this.showSettingsTip(
+          this.parentLockEnabled
+            ? '🔒 家长防改锁已开启：下次点设置需算一道乘法题解锁'
+            : '🔓 家长防改锁已关闭'
+        );
+      });
+    }
+
     const fullscreenToggle = document.getElementById('fullscreen-toggle');
+    const syncFsState = () => this.syncQuickSettingsTiles();
+    document.addEventListener('fullscreenchange', syncFsState);
+    document.addEventListener('webkitfullscreenchange', syncFsState);
+
     if (fullscreenToggle) {
       fullscreenToggle.addEventListener('click', () => {
+        window.soundManager.playPop();
         const docEl = document.documentElement;
         const reqFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
         const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
         const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
         if (!reqFs) {
+          if (this.settingsModal) this.settingsModal.classList.remove('active');
           const pwaModal = document.getElementById('pwa-install-modal');
           if (pwaModal) pwaModal.classList.add('active');
           return;
         }
         if (!fsEl) {
-          Promise.resolve(reqFs.call(docEl)).catch(() => {
+          Promise.resolve(reqFs.call(docEl)).then(syncFsState).catch(() => {
+            if (this.settingsModal) this.settingsModal.classList.remove('active');
             const pwaModal = document.getElementById('pwa-install-modal');
             if (pwaModal) pwaModal.classList.add('active');
           });
-          fullscreenToggle.textContent = '🔲 退出全屏';
         } else if (exitFs) {
-          Promise.resolve(exitFs.call(document)).catch(() => {});
-          fullscreenToggle.textContent = '🔳 全屏玩';
+          Promise.resolve(exitFs.call(document)).then(syncFsState).catch(() => {});
         }
       });
     }
@@ -338,7 +469,7 @@ class MathGameApp {
     // 键盘快捷键支持 (数字键 1-4 选答案, R 重读题目, Escape 关闭弹窗)
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+        document.querySelectorAll('.modal-overlay.active').forEach(m => handleModalDismiss(m));
         return;
       }
       const anyModalOpen = document.querySelector('.modal-overlay.active');
@@ -358,12 +489,195 @@ class MathGameApp {
     });
   }
 
+  // ================= 设置中心与家长锁逻辑 =================
+  openSettingsRequest() {
+    if (!this.parentLockEnabled) {
+      this.openSettingsModal();
+      return;
+    }
+    this.openParentGate();
+  }
+
+  openParentGate() {
+    if (!this.parentGateModal) {
+      this.openSettingsModal();
+      return;
+    }
+    const f1 = Math.floor(Math.random() * 4) + 6; // 6 ~ 9
+    const f2 = Math.floor(Math.random() * 4) + 6; // 6 ~ 9
+    const ans = f1 * f2;
+    const qEl = document.getElementById('parent-gate-question');
+    const optsEl = document.getElementById('parent-gate-options');
+    if (qEl) qEl.textContent = `${f1} × ${f2} = ?`;
+    if (optsEl) {
+      const set = new Set([ans, ans + f1, ans - f2, ans + 4, ans - 3]);
+      const choices = Array.from(set).filter(n => n > 10).slice(0, 4).sort((a, b) => a - b);
+      if (!choices.includes(ans)) choices[0] = ans;
+      choices.sort((a, b) => a - b);
+      optsEl.innerHTML = '';
+      choices.forEach(val => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'candy-btn btn-secondary parent-gate-opt-btn';
+        btn.textContent = val;
+        btn.addEventListener('click', () => {
+          if (val === ans) {
+            window.soundManager.playCorrect();
+            this.parentGateModal.classList.remove('active');
+            this.openSettingsModal();
+          } else {
+            window.soundManager.playWrong();
+            btn.classList.add('wobble');
+            setTimeout(() => btn.classList.remove('wobble'), 450);
+          }
+        });
+        optsEl.appendChild(btn);
+      });
+    }
+    this.parentGateModal.classList.add('active');
+  }
+
+  openSettingsModal() {
+    this.settingsChangedPending = false;
+    this.showSettingsTip('');
+    this.renderSettingsUI();
+    if (this.settingsModal) {
+      this.settingsModal.classList.add('active');
+    }
+  }
+
+  showSettingsTip(msg) {
+    const tipEl = document.getElementById('settings-tip-msg');
+    if (!tipEl) return;
+    if (!msg) {
+      tipEl.style.display = 'none';
+      tipEl.textContent = '';
+    } else {
+      tipEl.textContent = msg;
+      tipEl.style.display = 'block';
+    }
+  }
+
+  syncQuickSettingsTiles() {
+    const soundTile = document.getElementById('sound-toggle');
+    const soundIcon = document.getElementById('sound-icon');
+    const soundLabel = document.getElementById('sound-label');
+    if (soundTile) {
+      const on = window.soundManager.soundEnabled;
+      soundTile.classList.toggle('active', on);
+      if (soundIcon) soundIcon.textContent = on ? '🔊' : '🔇';
+      if (soundLabel) soundLabel.textContent = on ? '音效：开启' : '音效：静音';
+    }
+
+    const voiceTile = document.getElementById('voice-toggle');
+    const voiceIcon = document.getElementById('voice-icon');
+    const voiceLabel = document.getElementById('voice-label');
+    if (voiceTile) {
+      const on = window.soundManager.voiceEnabled;
+      voiceTile.classList.toggle('active', on);
+      if (voiceIcon) voiceIcon.textContent = on ? '🗣️' : '🤐';
+      if (voiceLabel) voiceLabel.textContent = on ? '读题：开启' : '读题：关闭';
+    }
+
+    const roleIcon = document.getElementById('voice-role-icon');
+    const roleLabel = document.getElementById('voice-role-label');
+    if (roleLabel && window.soundManager.getActiveVoiceOption) {
+      const opt = window.soundManager.getActiveVoiceOption();
+      if (roleIcon && opt.emoji) roleIcon.textContent = opt.emoji;
+      roleLabel.textContent = `音色：${opt.shortLabel || '默认'}`;
+    }
+
+    const lockTile = document.getElementById('parent-lock-toggle');
+    const lockIcon = document.getElementById('parent-lock-icon');
+    const lockLabel = document.getElementById('parent-lock-label');
+    if (lockTile) {
+      lockTile.classList.toggle('active', this.parentLockEnabled);
+      if (lockIcon) lockIcon.textContent = this.parentLockEnabled ? '🔒' : '🔓';
+      if (lockLabel) lockLabel.textContent = this.parentLockEnabled ? '家长锁：开启' : '家长锁：关闭';
+    }
+
+    const fsTile = document.getElementById('fullscreen-toggle');
+    const fsLabel = document.getElementById('fullscreen-label');
+    const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+    if (fsTile) fsTile.classList.toggle('active', isFs);
+    if (fsLabel) fsLabel.textContent = isFs ? '退出全屏' : '开启全屏';
+  }
+
+  renderSettingsUI() {
+    this.syncQuickSettingsTiles();
+
+    // 1. 难度档位高亮同步
+    document.querySelectorAll('.settings-diff-card').forEach(card => {
+      card.classList.toggle('active', card.dataset.diff === this.difficultySetting);
+    });
+
+    // 2. 题型数量统计
+    const countEl = document.getElementById('settings-skill-count');
+    if (countEl) {
+      countEl.textContent = `已选 ${this.enabledSkillIds.size} / ${this.curriculumCatalog.length} 项`;
+    }
+
+    // 3. 分组渲染题型多选芯片
+    const container = document.getElementById('settings-skills-container');
+    if (!container) return;
+
+    const groups = [
+      { key: 'ktest', title: '🎓 K班测试核心真题（6项）' },
+      { key: 'calc', title: '🧮 算术·凑十破十·天平·群数（7项）' },
+      { key: 'visual', title: '🧩 规律火车·3D积木·奇妙时钟（3项）' }
+    ];
+
+    container.innerHTML = groups.map(grp => {
+      const items = this.curriculumCatalog.filter(s => s.group === grp.key);
+      const chipsHtml = items.map(skill => {
+        const checked = this.enabledSkillIds.has(skill.id);
+        return `
+          <button type="button" class="settings-skill-chip ${checked ? 'checked' : ''}" data-skill-id="${skill.id}" data-no-tts="true">
+            <span class="chip-check">${checked ? '✅' : '⬜'}</span>
+            <span class="chip-icon">${skill.icon}</span>
+            <span class="chip-name">${skill.label}</span>
+          </button>
+        `;
+      }).join('');
+      return `
+        <div class="settings-skills-group">
+          <div class="skills-group-label">${grp.title}</div>
+          <div class="skills-group-chips">${chipsHtml}</div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.settings-skill-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const id = chip.dataset.skillId;
+        if (!id) return;
+        if (this.enabledSkillIds.has(id)) {
+          if (this.enabledSkillIds.size <= 1) {
+            window.soundManager.playWrong();
+            this.showSettingsTip('💡 至少需要保留 1 种出题题型哦！');
+            return;
+          }
+          this.enabledSkillIds.delete(id);
+        } else {
+          this.enabledSkillIds.add(id);
+        }
+        window.soundManager.playPop();
+        this.showSettingsTip('');
+        this.questionDeck = [];
+        this.sprintDeck = [];
+        this.settingsChangedPending = true;
+        this.saveSettings();
+        this.renderSettingsUI();
+      });
+    });
+  }
+
   startSmartAdventure() {
     this.speedrunActive = false;
     this.currentMode = 'smart';
     if (this.speedrunHud) this.speedrunHud.style.display = 'none';
     this.syncSprintButtonUI();
-    this.setMascot('智能闯关已开启！系统会自动为你挑选最棒的进阶好题哦！🦊');
+    this.setMascot('欢迎来到数学小王国！右上角「设置」可自由挑选想练的题型与难度哦！🦊');
     this.generateQuestion();
   }
 
@@ -377,7 +691,7 @@ class MathGameApp {
     this.currentMode = 'smart';
     if (this.speedrunHud) this.speedrunHud.style.display = 'none';
     this.syncSprintButtonUI();
-    this.setMascot('回到智能进阶闯关模式！一步一个脚印攻克难题吧！🌟');
+    this.setMascot('回到常规闯关模式！一步一个脚印攻克好题吧！🌟');
     this.generateQuestion();
   }
 
@@ -402,24 +716,32 @@ class MathGameApp {
     return copy;
   }
 
-  // 记录当前题型出错，安排在 3 题后用全新数字进行错题巩固
+  getEnabledSkillsPool() {
+    const pool = this.curriculumCatalog.filter(s => this.enabledSkillIds.has(s.id));
+    return pool.length > 0 ? pool : [...this.curriculumCatalog];
+  }
+
+  // 记录当前题型出错，安排在 4 题后用全新数字进行错题巩固（队列上限 3 项，防堆积循环）
   scheduleMistakeReview() {
     if (this.currentQuestionHadMistake) return;
     this.currentQuestionHadMistake = true;
     if (!this.currentSkill) return;
     const skillId = this.currentSkill.id;
     const alreadyQueued = this.mistakeReviewQueue.some(item => item.skillId === skillId);
-    if (!alreadyQueued) {
-      this.mistakeReviewQueue.push({ skillId, dueIn: 3 });
+    if (!alreadyQueued && this.mistakeReviewQueue.length < 3) {
+      this.mistakeReviewQueue.push({ skillId, dueIn: 4 });
     }
   }
 
-  // 智能课程牌组抽题器（涵盖错题到期优先、洗牌全覆盖、相邻绝不重样）
+  // 智能课程牌组抽题器（支持设置页单题型专练/任意组合多选、错题隔题巩固、洗牌全覆盖）
   pickNextSmartSkill(forSprint = false) {
+    const enabledPool = this.getEnabledSkillsPool();
+
     if (forSprint) {
+      this.sprintDeck = this.sprintDeck.filter(s => this.enabledSkillIds.has(s.id));
       if (this.sprintDeck.length === 0) {
-        const pool = this.curriculumCatalog.filter(s => s.sprintOk);
-        this.sprintDeck = this.shuffleArray(pool);
+        const sprintCandidates = enabledPool.filter(s => s.sprintOk);
+        this.sprintDeck = this.shuffleArray(sprintCandidates.length > 0 ? sprintCandidates : enabledPool);
       }
       if (this.sprintDeck.length > 1 && this.sprintDeck[0].id === this.lastSkillId) {
         const swapIdx = 1 + Math.floor(Math.random() * (this.sprintDeck.length - 1));
@@ -427,42 +749,65 @@ class MathGameApp {
       }
       const chosen = this.sprintDeck.shift();
       this.lastSkillId = chosen.id;
+      this.lastWasReview = false;
       return { skill: chosen, isReview: false };
     }
 
-    // 1. 递减错题巩固倒计时，若有到期且不与上一题重样的错题，优先安排靶向巩固
+    // 若家长在设置页仅勾选了 1 种专项题型，直接专注练习该题型（由签名池保证数字不重样）
+    if (enabledPool.length === 1) {
+      const onlySkill = enabledPool[0];
+      this.lastSkillId = onlySkill.id;
+      this.lastWasReview = false;
+      return { skill: onlySkill, isReview: false };
+    }
+
+    // 1. 递减错题巩固倒计时，绝不连续两题都是错题巩固，确保主线新题型顺畅推进
+    this.mistakeReviewQueue = this.mistakeReviewQueue.filter(item => this.enabledSkillIds.has(item.skillId));
     this.mistakeReviewQueue.forEach(item => { item.dueIn -= 1; });
-    const dueIdx = this.mistakeReviewQueue.findIndex(
-      item => item.dueIn <= 0 && item.skillId !== this.lastSkillId
-    );
-    if (dueIdx !== -1) {
-      const [dueItem] = this.mistakeReviewQueue.splice(dueIdx, 1);
-      const found = this.curriculumCatalog.find(s => s.id === dueItem.skillId);
-      if (found) {
-        this.lastSkillId = found.id;
-        if (found.id === 'ktest:q3') this.questionsSinceFactFamily = 0;
-        else this.questionsSinceFactFamily += 1;
-        return { skill: found, isReview: true };
+    if (!this.lastWasReview) {
+      const dueIdx = this.mistakeReviewQueue.findIndex(
+        item => item.dueIn <= 0 && item.skillId !== this.lastSkillId
+      );
+      if (dueIdx !== -1) {
+        const [dueItem] = this.mistakeReviewQueue.splice(dueIdx, 1);
+        const found = enabledPool.find(s => s.id === dueItem.skillId);
+        if (found) {
+          this.lastSkillId = found.id;
+          this.lastWasReview = true;
+          if (found.id === 'ktest:q3') this.questionsSinceFactFamily = 0;
+          else this.questionsSinceFactFamily += 1;
+          return { skill: found, isReview: true };
+        }
       }
     }
 
-    // 2. 从 16 张均衡高阶牌组中抽取，空了则重新洗牌（开局前几题优先让孩子体验丰富题型）
+    this.lastWasReview = false;
+
+    // 2. 从已勾选的课程牌组中洗牌抽取
+    this.questionDeck = this.questionDeck.filter(s => this.enabledSkillIds.has(s.id));
     if (this.questionDeck.length === 0) {
-      this.questionDeck = this.shuffleArray(this.curriculumCatalog);
+      this.questionDeck = this.shuffleArray(enabledPool);
     }
 
-    // 避免相邻两题抽到相同题型，且一图四式(需填12空)间隔至少 3 题以上
-    const conflictIdx = this.questionDeck.findIndex(cand => {
+    // 避免相邻两题同款；若启用池 >= 4 项则让一图四式至少间隔 3 题
+    const minFactGap = enabledPool.length >= 4 ? 3 : 1;
+    const nonConflictIdx = this.questionDeck.findIndex(cand => {
       if (cand.id === this.lastSkillId) return false;
-      if (cand.id === 'ktest:q3' && this.questionsSinceFactFamily < 3) return false;
+      if (cand.id === 'ktest:q3' && this.questionsSinceFactFamily < minFactGap) return false;
       return true;
     });
 
     let chosen;
-    if (conflictIdx > 0) {
-      [chosen] = this.questionDeck.splice(conflictIdx, 1);
-    } else {
+    if (nonConflictIdx > 0) {
+      [chosen] = this.questionDeck.splice(nonConflictIdx, 1);
+    } else if (nonConflictIdx === 0) {
       chosen = this.questionDeck.shift();
+    } else {
+      // 当前剩余牌只有跟上一题相同的牌时，从 enabledPool 中挑一张不同的补充
+      const altPool = enabledPool.filter(s => s.id !== this.lastSkillId);
+      chosen = altPool.length > 0
+        ? altPool[Math.floor(Math.random() * altPool.length)]
+        : this.questionDeck.shift();
     }
 
     this.lastSkillId = chosen.id;
@@ -480,7 +825,11 @@ class MathGameApp {
     } else if (isReview) {
       this.smartStageBadgeEl.classList.add('tier-review');
       this.smartStageBadgeEl.textContent = `💡 错题巩固 · ${skill.label}`;
-    } else if (this.streak >= 3 || this.difficulty === '100') {
+    } else if (this.difficultySetting === '10') {
+      this.smartStageBadgeEl.textContent = `🌱 基础热身 · ${skill.label}`;
+    } else if (this.difficultySetting === '20') {
+      this.smartStageBadgeEl.textContent = `🚀 进阶突破 · ${skill.label}`;
+    } else if (this.difficultySetting === '100' || this.difficulty === '100') {
       this.smartStageBadgeEl.classList.add('tier-master');
       this.smartStageBadgeEl.textContent = `🔥 高阶挑战 · ${skill.label}`;
     } else {
@@ -531,14 +880,18 @@ class MathGameApp {
     const { skill, isReview } = this.pickNextSmartSkill(this.speedrunActive);
     this.currentSkill = skill;
 
-    // 动态难度自适应：绝不降回 '10'！连对 3 题或特定高阶题型自动激活 '100' 挑战档
-    const forceHighTier = (
-      skill.id === 'arithmetic:chain' ||
-      skill.id === 'comparison:twodigit' ||
-      skill.id === 'tenframes:break10' ||
-      skill.id === 'counting:grouped'
-    );
-    this.difficulty = (forceHighTier || this.streak >= 3) ? '100' : '20';
+    // 依据设置页难度配置决定本道题实际难度档位
+    if (this.difficultySetting === 'auto') {
+      const forceHighTier = (
+        skill.id === 'arithmetic:chain' ||
+        skill.id === 'comparison:twodigit' ||
+        skill.id === 'tenframes:break10' ||
+        skill.id === 'counting:grouped'
+      );
+      this.difficulty = (forceHighTier || this.streak >= 3) ? '100' : '20';
+    } else {
+      this.difficulty = this.difficultySetting;
+    }
 
     this.updateSmartStageBadge(skill, isReview);
 
@@ -593,7 +946,7 @@ class MathGameApp {
     }
 
     if (isReview && !this.speedrunActive) {
-      this.setMascot(`💡 错题小巩固：刚才这类「${skill.label}」有点小挑战，换组新数字再拿下一城吧！`);
+      this.setMascot(`💡 错题巩固：换组新数字再攻克一道「${skill.label}」吧！`);
     }
 
     if (!this.speedrunActive && this.currentQuestion && this.currentQuestion.audioPrompt) {
@@ -602,7 +955,7 @@ class MathGameApp {
         if (!this.speedrunActive && this.currentQuestion && this.transitionSeq === qSeq) {
           window.soundManager.speak(this.currentQuestion.audioPrompt);
         }
-      }, 260);
+      }, 220);
     }
   }
 
@@ -612,12 +965,17 @@ class MathGameApp {
     const emoji = itemPool[Math.floor(Math.random() * itemPool.length)];
 
     // 70% 考察「满盒群组 + 盒外零头」(如 3盒×5个 + 3个 = 18)，30% 考察「等量多组乘法启蒙」(如 4盒×3个 = 12)
-    const hasRemainder = Math.random() < 0.7;
-    const groupSizes = this.difficulty === '100' ? [3, 4, 5, 10] : [2, 3, 5];
+    const isEasy10 = this.difficulty === '10';
+    const hasRemainder = Math.random() < (isEasy10 ? 0.5 : 0.7);
+    const groupSizes = isEasy10
+      ? [2, 3, 5]
+      : (this.difficulty === '100' ? [3, 4, 5, 10] : [2, 3, 5]);
     const groupSize = groupSizes[Math.floor(Math.random() * groupSizes.length)];
-    const numGroups = groupSize === 10
-      ? Math.floor(Math.random() * 3) + 2 // 2~4 盒十个装
-      : Math.floor(Math.random() * 3) + 3; // 3~5 盒
+    const numGroups = isEasy10
+      ? (groupSize === 5 ? 2 : (Math.floor(Math.random() * 2) + 2)) // 2~3 盒温和热身
+      : (groupSize === 10
+          ? Math.floor(Math.random() * 3) + 2 // 2~4 盒十个装
+          : Math.floor(Math.random() * 3) + 3); // 3~5 盒
     const remainder = hasRemainder ? (Math.floor(Math.random() * (groupSize - 1)) + 1) : 0;
     const total = groupSize * numGroups + remainder;
 
@@ -625,14 +983,15 @@ class MathGameApp {
       ? `群组快数：每满盒 ${groupSize} 个，有 ${numGroups} 满盒零 ${remainder} 个，一共多少个 ${emoji}？`
       : `群组快数：每盒 ${groupSize} 个，一共有 ${numGroups} 盒，合起来是多少个 ${emoji}？`;
     const audioPrompt = remainder > 0
-      ? `仔细看：每满盒有 ${groupSize} 个，一共有 ${numGroups} 个满盒，旁边还有 ${remainder} 个零头，快算算一共有多少个呢？`
-      : `每盒有 ${groupSize} 个，一共有 ${numGroups} 盒，按 ${groupSize} 个一数，合起来是多少个呢？`;
+      ? `每满盒 ${groupSize} 个，有 ${numGroups} 满盒加 ${remainder} 个零头，一共多少个？`
+      : `每盒 ${groupSize} 个，一共 ${numGroups} 盒，合起来是多少个？`;
 
     this.currentQuestion = {
       answer: total,
       audioPrompt,
       trapValue: remainder > 0 ? groupSize * numGroups : undefined,
       trapHint: remainder > 0 ? `${groupSize * numGroups} 是前面 ${numGroups} 个满盒的数量哦，别忘了加上最后一盒里的 ${remainder} 个零头！` : null,
+      shortTrapVoice: remainder > 0 ? '别忘加零头哦！' : null,
       type: 'counting'
     };
 
@@ -701,7 +1060,35 @@ class MathGameApp {
   generateComparisonQuestion(subType = 'expr') {
     let leftExpr, rightExpr, leftVal, rightVal;
 
-    if (subType === 'twodigit' || (this.difficulty === '100' && Math.random() < 0.5)) {
+    if (this.difficulty === '10') {
+      // 基础热身：10~15 以内温和算式或十几数位对比
+      if (subType === 'twodigit') {
+        const d1 = 1;
+        const d2 = Math.floor(Math.random() * 5) + 2; // 2~6 -> 12 vs 21 或 10+X 对比
+        if (Math.random() < 0.5) {
+          leftVal = d1 * 10 + d2;
+          rightVal = d2 * 10 + d1;
+          leftExpr = `${leftVal}`;
+          rightExpr = `${rightVal}`;
+        } else {
+          const ones = Math.floor(Math.random() * 5) + 2;
+          leftVal = 10 + ones;
+          leftExpr = `10 + ${ones}`;
+          const delta = Math.random() < 0.34 ? 0 : (Math.random() > 0.5 ? 1 : -1);
+          rightVal = Math.max(11, leftVal + delta);
+          rightExpr = `${rightVal}`;
+        }
+      } else {
+        const a1 = Math.floor(Math.random() * 5) + 2; // 2~6
+        const b1 = Math.floor(Math.random() * (9 - a1)) + 2; // 保证和 <= 10
+        leftVal = a1 + b1;
+        leftExpr = `${a1} + ${b1}`;
+        const delta = Math.random() < 0.32 ? 0 : (Math.random() > 0.5 ? 1 : -1);
+        rightVal = Math.max(3, Math.min(10, leftVal + delta));
+        const b2 = Math.floor(Math.random() * 3) + 1;
+        rightExpr = rightVal + b2 <= 10 ? `${rightVal + b2} - ${b2}` : `${rightVal - 1} + 1`;
+      }
+    } else if (subType === 'twodigit' || (this.difficulty === '100' && Math.random() < 0.5)) {
       // 数位挑战：两位数加减对比 或 易混淆倒置数加减对比 (如 38 + 5 vs 48 - 5，或 47 vs 74)
       const variant = Math.floor(Math.random() * 3);
       if (variant === 0) {
@@ -838,15 +1225,23 @@ class MathGameApp {
   // ================= 3. 高阶算术挑战 (逆向未知数填空、进退位、连加连减与两位数运算) =================
   generateArithmeticQuestion(subType = 'blank') {
     let promptHtml, audioText, answer, strategyTip = '';
-    let trapValue, trapHint;
+    let trapValue, trapHint, shortTrapVoice;
+    const isEasy10 = this.difficulty === '10';
 
     if (subType === 'blank') {
-      // 4种逆向未知数填空：A + ? = C、? + B = C、C - ? = A、? - B = A (最能锻炼一年级逆向代数思维)
+      // 4种逆向未知数填空：A + ? = C、? + B = C、C - ? = A、? - B = A
       const form = Math.floor(Math.random() * 4);
-      const a = Math.floor(Math.random() * 5) + 5; // 5~9
-      const minB = Math.max(3, 11 - a);
-      const b = Math.floor(Math.random() * (9 - minB + 1)) + minB; // 保证进退位 c ∈ [11, 18]
-      const c = a + b;
+      let a, b, c;
+      if (isEasy10) {
+        a = Math.floor(Math.random() * 5) + 2; // 2~6
+        b = Math.floor(Math.random() * (9 - a)) + 2; // c ∈ [4, 10]
+        c = a + b;
+      } else {
+        a = Math.floor(Math.random() * 5) + 5; // 5~9
+        const minB = Math.max(3, 11 - a);
+        b = Math.floor(Math.random() * (9 - minB + 1)) + minB; // 保证进退位 c ∈ [11, 18]
+        c = a + b;
+      }
       const need10 = 10 - a;
       const leftOver = b - need10;
 
@@ -854,34 +1249,74 @@ class MathGameApp {
         // a + ? = c
         answer = b;
         promptHtml = `${a} + <span class="blank-box">?</span> = ${c}`;
-        audioText = `逆向思考：${a} 加上几等于 ${c} 呢？`;
-        strategyTip = `💡 凑十逆推：${a} 加 ${need10} 到 10，10 再加 ${leftOver} 到 ${c}，一共加了几个？`;
+        audioText = `${a} 加几等于 ${c}？`;
+        strategyTip = isEasy10
+          ? `💡 逆向思考：总数是 ${c}，算算 ${c} - ${a} 就知道填几啦！`
+          : `💡 凑十逆推：${a} 加 ${need10} 到 10，10 再加 ${leftOver} 到 ${c}，一共加了几个？`;
       } else if (form === 1) {
         // ? + b = c
         answer = a;
         promptHtml = `<span class="blank-box">?</span> + ${b} = ${c}`;
-        audioText = `想一想：几加上 ${b} 等于 ${c} 呢？`;
+        audioText = `几加上 ${b} 等于 ${c}？`;
         strategyTip = `💡 逆向秘诀：总数是 ${c}，用 ${c} 减去 ${b} 就能找到方格里的数啦！`;
       } else if (form === 2) {
         // c - ? = a
         answer = b;
         promptHtml = `${c} - <span class="blank-box">?</span> = ${a}`;
-        audioText = `${c} 减去几等于 ${a} 呢？`;
+        audioText = `${c} 减去几等于 ${a}？`;
         strategyTip = `💡 想一想：共有 ${c} 个，拿走多少个才会剩下 ${a} 个呢？`;
       } else {
         // ? - b = a （高频易错题：孩子容易算成 b - a 或 a - b，实际应为 a + b！）
         answer = c;
         promptHtml = `<span class="blank-box">?</span> - ${b} = ${a}`;
-        audioText = `小心陷阱哦：几减去 ${b} 还剩 ${a} 呢？方格里是最大的总数哦！`;
+        audioText = `几减去 ${b} 还剩 ${a}？注意方格是总数哦！`;
         strategyTip = `💡 防坑妙招：被减数在最前面最大！拿走的 ${b} 和剩下的 ${a} 合起来才是原来的总数！`;
         if (Math.abs(a - b) > 0) {
           trapValue = Math.abs(a - b);
           trapHint = `小心陷阱哦！方格在减号最前面，拿走 ${b} 个还剩 ${a} 个，原来的总数要比 ${b} 和 ${a} 都大，应该算 ${a} 加 ${b} 哦！`;
+          shortTrapVoice = '被减数要把两数相加！';
         }
+      }
+    } else if (isEasy10) {
+      // 基础热身：10以内温和连加连减与两步加减
+      const qKind = Math.floor(Math.random() * 3);
+      if (qKind === 0) {
+        const start = Math.floor(Math.random() * 4) + 7; // 7~10
+        const sub = Math.floor(Math.random() * 3) + 2;   // 2~4
+        const mid = start - sub;
+        const add = Math.floor(Math.random() * 3) + 2;   // 2~4
+        answer = mid + add;
+        promptHtml = `${start} - ${sub} + ${add} = ?`;
+        audioText = `${start} 减 ${sub} 再加 ${add} 等于几？`;
+        strategyTip = `💡 分步心算：先算 ${start} - ${sub} = ${mid}，再加 ${add}！`;
+        trapValue = mid;
+        trapHint = `${mid} 只是第一步的得数哦，后面还要再加上 ${add} 呢！`;
+        shortTrapVoice = '还要算第二步哦！';
+      } else if (qKind === 1) {
+        const a = Math.floor(Math.random() * 4) + 3; // 3~6
+        const b = Math.floor(Math.random() * 3) + 2; // 2~4
+        const mid = a + b;
+        const c = Math.floor(Math.random() * 3) + 2; // 2~4
+        answer = mid - c;
+        promptHtml = `${a} + ${b} - ${c} = ?`;
+        audioText = `${a} 加 ${b} 再减 ${c} 等于几？`;
+        strategyTip = `💡 分步心算：先算 ${a} + ${b} = ${mid}，再减去 ${c}！`;
+        trapValue = mid;
+        trapHint = `${mid} 是前两个数相加的得数哦，还要减去后面的 ${c}！`;
+        shortTrapVoice = '还要算第二步哦！';
+      } else {
+        const ans = Math.floor(Math.random() * 4) + 2;
+        const s1 = Math.floor(Math.random() * 3) + 2;
+        const s2 = Math.floor(Math.random() * 2) + 2;
+        const total = ans + s1 + s2;
+        answer = ans;
+        promptHtml = `${total} - ${s1} - ${s2} = ?`;
+        audioText = `${total} 减 ${s1} 再减 ${s2} 等于几？`;
+        strategyTip = `💡 分步计算：先算 ${total} - ${s1}，再减去 ${s2}！`;
       }
     } else {
       // 高阶连加连减 / 加减混合 与 两位数进退位运算
-      const qKind = Math.floor(Math.random() * 4);
+      const qKind = this.difficulty === '20' ? Math.floor(Math.random() * 3) : Math.floor(Math.random() * 4);
       if (qKind === 0) {
         // 加减混合：如 14 - 6 + 5 = ?
         const start = Math.floor(Math.random() * 6) + 12; // 12~17
@@ -890,10 +1325,11 @@ class MathGameApp {
         const add = Math.floor(Math.random() * 6) + 4;    // 4~9
         answer = mid + add;
         promptHtml = `${start} - ${sub} + ${add} = ?`;
-        audioText = `两步混合运算：${start} 减 ${sub} 再加 ${add} 等于几？`;
+        audioText = `${start} 减 ${sub} 再加 ${add} 等于几？`;
         strategyTip = `💡 分步心算：第一步先算 ${start} - ${sub} = ?，第二步再加上 ${add}！`;
         trapValue = mid;
         trapHint = `${mid} 只是第一步 ${start} 减 ${sub} 的得数哦，后面还要再加上 ${add} 呢！`;
+        shortTrapVoice = '还要算第二步哦！';
       } else if (qKind === 1) {
         // 先加后减混合：如 8 + 7 - 6 = ?
         const a = Math.floor(Math.random() * 4) + 6; // 6~9
@@ -902,22 +1338,24 @@ class MathGameApp {
         const c = Math.floor(Math.random() * 6) + 4; // 4~9
         answer = mid - c;
         promptHtml = `${a} + ${b} - ${c} = ?`;
-        audioText = `两步混合运算：${a} 加 ${b} 再减去 ${c} 等于几？`;
+        audioText = `${a} 加 ${b} 再减 ${c} 等于几？`;
         strategyTip = `💡 分步心算：先算 ${a} + ${b} 凑十得多少，再减去 ${c}！`;
         trapValue = mid;
         trapHint = `${mid} 是前两个数相加的得数哦，别忘了还要减去后面的 ${c}！`;
-      } else if (qKind === 2) {
-        // 两位数进位加一位数：如 27 + 6 = 33
+        shortTrapVoice = '还要算第二步哦！';
+      } else if (qKind === 3) {
+        // 两位数进位加一位数：如 27 + 6 = 33 (仅 100 高阶模式触发)
         const tens = (Math.floor(Math.random() * 5) + 2) * 10; // 20~60
         const ones = Math.floor(Math.random() * 4) + 6;        // 6~9
         const addOne = Math.floor(Math.random() * 5) + 4;      // 4~8 (保证个位满十进位)
         const baseNum = tens + ones;
         answer = baseNum + addOne;
         promptHtml = `${baseNum} + ${addOne} = ?`;
-        audioText = `两位数进位挑战：${baseNum} 加 ${addOne} 等于几呢？`;
+        audioText = `${baseNum} 加 ${addOne} 等于几？`;
         strategyTip = `💡 满十进一：个位 ${ones} + ${addOne} = ${ones + addOne} 满十啦，十位要多加 1 个十！`;
         trapValue = tens + ((ones + addOne) % 10); // 忘记进位的典型错答
         trapHint = `个位 ${ones} 加 ${addOne} 等于 ${ones + addOne}，已经满十进一啦，十位应该变成 ${(tens / 10) + 1} 个十哦！`;
+        shortTrapVoice = '注意个位满十进一！';
       } else {
         // 连减挑战：如 17 - 5 - 4 = 8
         const ans = Math.floor(Math.random() * 6) + 4;
@@ -926,7 +1364,7 @@ class MathGameApp {
         const total = ans + s1 + s2;
         answer = ans;
         promptHtml = `${total} - ${s1} - ${s2} = ?`;
-        audioText = `连减挑战：${total} 先减 ${s1} 再减 ${s2}，还剩几？`;
+        audioText = `${total} 先减 ${s1} 再减 ${s2}，还剩几？`;
         strategyTip = `💡 巧算秘诀：可以先算 ${total} - ${s1}，也可以把减去的 ${s1} 和 ${s2} 先合起来一共拿走 ${s1 + s2}！`;
       }
     }
@@ -936,6 +1374,7 @@ class MathGameApp {
       answer,
       trapValue,
       trapHint,
+      shortTrapVoice,
       audioPrompt: audioText,
       type: 'arithmetic'
     };
@@ -972,18 +1411,29 @@ class MathGameApp {
   generatePatternQuestion() {
     let fullSeq = [];
     let descText = '';
-    const patternKind = Math.floor(Math.random() * 4);
+    const isEasy10 = this.difficulty === '10';
+    const patternKind = isEasy10
+      ? (Math.random() < 0.65 ? 0 : 1)
+      : (this.difficulty === '20' ? Math.floor(Math.random() * 3) : Math.floor(Math.random() * 4));
 
     if (patternKind === 0) {
-      // 非整倍起点的等差跳数 (如 3, 6, 9, 12, 15 或 4, 8, 12, 16, 20 或 2, 7, 12, 17, 22)
-      const step = [3, 4, 5, 6][Math.floor(Math.random() * 4)];
-      const start = Math.floor(Math.random() * 6) + 2;
+      // 等差递增跳数
+      const step = isEasy10
+        ? [1, 2][Math.floor(Math.random() * 2)]
+        : [3, 4, 5, 6][Math.floor(Math.random() * 4)];
+      const start = isEasy10
+        ? Math.floor(Math.random() * 5) + 1
+        : Math.floor(Math.random() * 6) + 2;
       fullSeq = [start, start + step, start + step * 2, start + step * 3, start + step * 4];
       descText = `等差递增规律：观察相邻车厢每次增加几，找出问号车厢的数字！`;
     } else if (patternKind === 1) {
-      // 逆向等差递减倒数 (如 22, 19, 16, 13, 10)
-      const step = [2, 3, 4, 5][Math.floor(Math.random() * 4)];
-      const last = Math.floor(Math.random() * 6) + 3;
+      // 逆向等差递减倒数
+      const step = isEasy10
+        ? [1, 2][Math.floor(Math.random() * 2)]
+        : [2, 3, 4, 5][Math.floor(Math.random() * 4)];
+      const last = isEasy10
+        ? Math.floor(Math.random() * 4) + 1
+        : Math.floor(Math.random() * 6) + 3;
       const start = last + step * 4;
       fullSeq = [start, start - step, start - step * 2, start - step * 3, start - step * 4];
       descText = `逆向递减规律：数字越来越小，算算每次减少几？`;
@@ -1055,26 +1505,31 @@ class MathGameApp {
 
   // ================= 5. 十格阵凑十与破十 (全双盒进退位与逆向补数，告别单盒低幼补10) =================
   generateTenFrameQuestion(subType = 'make10') {
+    const isEasy10 = this.difficulty === '10';
     if (subType === 'make10') {
-      // 50% 双盒凑十进位求和 (8 + 6 = ?)，50% 双盒逆向补数 (已有 7 个 🔴，要凑够 15 个还要放几个 🟡？)
-      const num1 = Math.floor(Math.random() * 4) + 6; // 6, 7, 8, 9
+      // 双盒凑十进位求和 或 双盒逆向补数
+      const num1 = isEasy10
+        ? Math.floor(Math.random() * 3) + 7 // 7, 8, 9
+        : Math.floor(Math.random() * 4) + 6; // 6, 7, 8, 9
       const minNum2 = 11 - num1;
-      const num2 = Math.floor(Math.random() * (9 - minNum2 + 1)) + minNum2;
+      const maxNum2 = isEasy10 ? Math.min(6, 13 - num1) : 9;
+      const num2 = Math.floor(Math.random() * Math.max(1, maxNum2 - minNum2 + 1)) + minNum2;
       const needToMake10 = 10 - num1;
       const remain = num2 - needToMake10;
       const total = num1 + num2;
 
-      const askMissingAddend = Math.random() < 0.45;
+      const askMissingAddend = !isEasy10 && Math.random() < 0.45;
 
       if (askMissingAddend) {
         this.questionTextEl.innerHTML = `十格阵逆向推理：<span>第一盒已有 ${num1} 个 🔴，还要添几个 🟡 才能凑够 ${total} 个？</span>`;
-        const audioPrompt = `十格阵逆向挑战：第一盒已经有 ${num1} 个红圆点，还要再放进几个黄圆点，合起来才是 ${total} 个呢？可以先凑满第一盒的 10 个再想哦！`;
+        const audioPrompt = `第一盒有 ${num1} 个红点，还要添几个黄点才是 ${total} 个？`;
 
         this.currentQuestion = {
           answer: num2,
           audioPrompt,
           trapValue: needToMake10,
           trapHint: `添上 ${needToMake10} 个只是刚把第一盒凑满 10 个哦！题目要凑够 ${total} 个，第二盒里还要再放 ${remain} 个，一共要添 ${needToMake10} 加 ${remain} 个！`,
+          shortTrapVoice: '还要加第二盒的个数哦！',
           type: 'tenframe'
         };
 
@@ -1184,20 +1639,24 @@ class MathGameApp {
 
     } else {
       // 破十法挑战：20以内退位减法的十格阵直观拆解 (如 14 - 6 = 8)
-      const total = Math.floor(Math.random() * 7) + 11; // 11~17
+      const total = isEasy10
+        ? Math.floor(Math.random() * 3) + 11 // 11~13
+        : Math.floor(Math.random() * 7) + 11; // 11~17
       const ones = total - 10;
       const minSub = ones + 1; // 确保个位不够减，必须破十
-      const sub = Math.floor(Math.random() * (9 - minSub + 1)) + minSub; // minSub ~ 9
+      const maxSub = isEasy10 ? Math.min(7, minSub + 3) : 9;
+      const sub = Math.floor(Math.random() * Math.max(1, maxSub - minSub + 1)) + minSub;
       const remainInTen = 10 - sub;
       const answer = total - sub;
 
       this.questionTextEl.innerHTML = `十格阵破十法：<span>${total} - ${sub} = ?</span> <span class="tip-sub">（先从满10里拿走${sub}个，再加第二盒零头）</span>`;
-      const audioPrompt = `破十法挑战：${total} 减 ${sub}，先从满十盒里拿走 ${sub} 个还剩 ${remainInTen} 个，再加上第二盒的 ${ones} 个等于几？`;
+      const audioPrompt = `${total} 减 ${sub}，先用 10 减 ${sub} 剩 ${remainInTen}，再加 ${ones} 等于几？`;
 
       this.currentQuestion = {
         answer,
         trapValue: remainInTen,
         trapHint: `${remainInTen} 是第一盒 10 拿走 ${sub} 之后剩下的个数哦，别忘了还要加上第二盒里的 ${ones} 个黄圆点！`,
+        shortTrapVoice: '别忘加第二盒零头！',
         audioPrompt,
         type: 'tenframe'
       };
@@ -1245,18 +1704,21 @@ class MathGameApp {
 
   // ================= 6. 奇妙时钟岛 (半点、一刻/三刻、5分刻度 & 1小时/半小时时间推算) =================
   generateClockQuestion() {
+    const isEasy10 = this.difficulty === '10';
     let hour = Math.floor(Math.random() * 12) + 1; // 1~12
-    const minutesPool = this.difficulty === '100'
-      ? [15, 30, 45, 5, 10, 20, 25, 35, 40, 50]
-      : [30, 15, 45, 0, 10, 20, 40, 50];
+    const minutesPool = isEasy10
+      ? [0, 30]
+      : (this.difficulty === '100'
+          ? [15, 30, 45, 5, 10, 20, 25, 35, 40, 50]
+          : [30, 15, 45, 0, 10, 20, 40, 50]);
     let minute = minutesPool[Math.floor(Math.random() * minutesPool.length)];
-    if (minute === this.lastClockMinute) {
+    if (minute === this.lastClockMinute && minutesPool.length > 1) {
       minute = minutesPool[(minutesPool.indexOf(minute) + 1) % minutesPool.length];
     }
     this.lastClockMinute = minute;
 
-    // 45% 概率升级为「时间推算应用题」（如：现在钟面是 X:XX，再过 1 小时 / 半小时后 / 1小时前 是几点？）
-    const askElapsed = (minute === 0 || minute === 30) && Math.random() < 0.55;
+    // 进阶/高阶下升级为「时间推算应用题」；基础热身仅考察直接认读整点与半点
+    const askElapsed = !isEasy10 && (minute === 0 || minute === 30) && Math.random() < 0.55;
     let ansHour = hour;
     let ansMinute = minute;
     let title = '';
@@ -1264,6 +1726,7 @@ class MathGameApp {
     let praiseOverride = null;
     let trapValue = undefined;
     let trapHint = null;
+    let shortTrapVoice = null;
 
     const curMinStr = minute < 10 ? `0${minute}` : `${minute}`;
     const curTimeStr = `${hour}:${curMinStr}`;
@@ -1273,28 +1736,31 @@ class MathGameApp {
       if (elapsedType === 0) {
         ansHour = (hour % 12) + 1;
         title = `时间推算：钟面现在的时间【再过 1 小时】是几点？`;
-        audioPrompt = `看钟面先认出现在是几点，想一想：再过 1 个小时，会变成几点呢？`;
+        audioPrompt = `看钟面想一想：再过 1 个小时是几点？`;
       } else if (elapsedType === 1) {
         ansHour = ((hour - 2 + 12) % 12) + 1;
         title = `时间推算：钟面现在的时间【1 小时前】是几点？`;
-        audioPrompt = `看钟面先认出现在是几点，倒推一下：1 个小时之前是几点呢？`;
+        audioPrompt = `看钟面倒推一下：1 个小时前是几点？`;
       } else {
         const totalMins = (hour % 12) * 60 + minute + 30;
         ansHour = Math.floor(totalMins / 60) % 12 || 12;
         ansMinute = totalMins % 60;
         title = `时间推算：钟面现在的时间【再过半小时(30分)】是几点？`;
-        audioPrompt = `看钟面先认出现在的时间，如果分针再往前走半圈，也就是再过 30 分钟，是几点几分呢？`;
+        audioPrompt = `看钟面想一想：再过 30 分钟是几点几分？`;
       }
       const ansMinStr = ansMinute < 10 ? `0${ansMinute}` : `${ansMinute}`;
       const targetStr = `${ansHour}:${ansMinStr}`;
       trapValue = curTimeStr;
       trapHint = `${curTimeStr} 是钟面上现在显示的时间哦！仔细听题目问的是变化之后的时间，再推算一步吧！`;
+      shortTrapVoice = '要算变化后的时间哦！';
       praiseOverride = `时间推算满分！钟面现在是 ${curTimeStr}，推算后正好是 ${targetStr}！`;
     } else {
       title = `认读时钟：仔细看时针与分针，现在是几点几分？`;
-      audioPrompt = minute === 30
-        ? `短时针走过数字几，长分针指在6代表30分，现在是几点几分呢？`
-        : `长分针每走一大格是 5 分钟，仔细看时针和分针，现在是几点几分呢？`;
+      audioPrompt = minute === 0
+        ? `长分针指着12是整点，现在是几点整？`
+        : (minute === 30
+            ? `长分针指在6代表30分，现在是几点半？`
+            : `长分针每大格5分钟，现在是几点几分？`);
     }
 
     const ansMinStr = ansMinute < 10 ? `0${ansMinute}` : ansMinute.toString();
@@ -1307,6 +1773,7 @@ class MathGameApp {
       praiseText: praiseOverride,
       trapValue,
       trapHint,
+      shortTrapVoice,
       audioPrompt,
       type: 'clock'
     };
@@ -1433,7 +1900,23 @@ class MathGameApp {
 
     let totalBlocks = 0;
 
-    if (this.difficulty === '20') {
+    if (this.difficulty === '10') {
+      // 基础热身：5~7 块温和双层积木结构，建立遮挡直觉
+      const targetCount = Math.floor(Math.random() * 3) + 5; // 5, 6, 7
+      grid[0][0] = 2;
+      grid[0][1] = 2;
+      grid[1][0] = 1;
+      let placed = 5;
+      const coords = [
+        [0, 2], [1, 1], [1, 2], [2, 0], [2, 1]
+      ].sort(() => 0.5 - Math.random());
+      for (const [r, c] of coords) {
+        if (placed >= targetCount) break;
+        grid[r][c] = 1;
+        placed += 1;
+      }
+      totalBlocks = placed;
+    } else if (this.difficulty === '20') {
       // 进阶：8~10 块，必含后排高柱遮挡底层隐藏块
       const targetCount = Math.floor(Math.random() * 3) + 8; // 8, 9, 10
       grid[0][0] = 3;
@@ -2136,12 +2619,13 @@ class MathGameApp {
 
   // 真题题型 1: 凑十数键分支图 (如 8 + 7 = 15，7 拆成 2 和 5；轮流考察拆分数与总和)
   buildKTestQ1MakeTenBond(stage) {
-    const aPool = [9, 8, 7, 6];
+    const isEasy10 = this.difficulty === '10';
+    const aPool = isEasy10 ? [9, 8] : [9, 8, 7, 6];
     const a = aPool[Math.floor(Math.random() * aPool.length)];
     const needForTen = 10 - a;
-    const minB = needForTen + 2;
-    const maxB = 9;
-    const b = Math.floor(Math.random() * (maxB - minB + 1)) + minB;
+    const minB = needForTen + (isEasy10 ? 1 : 2);
+    const maxB = isEasy10 ? Math.min(6, minB + 3) : 9;
+    const b = Math.floor(Math.random() * Math.max(1, maxB - minB + 1)) + minB;
     const rem = b - needForTen;
     const total = a + b;
 
@@ -2150,25 +2634,28 @@ class MathGameApp {
     const askMode = roll < 0.38 ? 'rem' : (roll < 0.62 ? 'need' : 'total');
     const correctAnswer = askMode === 'rem' ? rem : (askMode === 'need' ? needForTen : total);
 
-    let titleZh, audioPrompt, helperFormulaHtml, trapValue, trapHint;
+    let titleZh, audioPrompt, helperFormulaHtml, trapValue, trapHint, shortTrapVoice;
     if (askMode === 'rem') {
       titleZh = `凑十数键：${a} 需要 ${needForTen} 凑成 10，那 ${b} 可以分成 ${needForTen} 和几？`;
-      audioPrompt = `凑十数键图：${a} 加 ${needForTen} 凑成 10，那把 ${b} 分成 ${needForTen} 和几呢？`;
+      audioPrompt = `凑十数键：${a} 加 ${needForTen} 凑成 10，${b} 分成 ${needForTen} 和几？`;
       helperFormulaHtml = `<strong>${a} + ${needForTen} = 10</strong>，<strong>${b} - ${needForTen} = ?</strong>`;
       trapValue = total;
       trapHint = `${total} 是最后的得数哦！这里问号在下面的小圆圈里，想一想 ${b} 分成 ${needForTen} 和几？`;
+      shortTrapVoice = '看清问号在小圆圈里哦！';
     } else if (askMode === 'need') {
       titleZh = `凑十数键：先看 ${a} 和几能凑成 10？（把 ${b} 分成 ？ 和 ${rem}）`;
-      audioPrompt = `凑十数键图：要想把 ${a} 凑成 10，需要把 ${b} 分成几和 ${rem} 呢？`;
+      audioPrompt = `凑十数键：要把 ${a} 凑成 10，${b} 要分成几和 ${rem}？`;
       helperFormulaHtml = `<strong>${a} + ? = 10</strong>，而且 <strong>? + ${rem} = ${b}</strong>`;
       trapValue = rem;
       trapHint = `仔细看哦，右边小圆圈已经是 ${rem} 啦，左边小圆圈要和 ${a} 凑成 10，${a} 加几等于 10 呢？`;
+      shortTrapVoice = `想想 ${a} 加几等于 10！`;
     } else {
       titleZh = `凑十数键：先把 ${a} 和 ${needForTen} 凑成 10，再算 ${a} + ${b} 等于几？`;
-      audioPrompt = `凑十法算一算：把 ${b} 分成 ${needForTen} 和 ${rem}，${a} 加 ${needForTen} 等于 10，10 再加 ${rem} 等于几呢？`;
+      audioPrompt = `凑十法：${a} 加 ${needForTen} 得 10，10 再加 ${rem} 等于几？`;
       helperFormulaHtml = `<strong>${a} + ${needForTen} = 10</strong>，<strong>10 + ${rem} = ?</strong>`;
       trapValue = 10;
       trapHint = `10 只是第一步凑出来的十哦，别忘了还要加上右边小圆圈剩下的 ${rem} 呢！`;
+      shortTrapVoice = '10还要加右边剩下的数！';
     }
 
     const praiseText = `太棒啦！把 ${b} 分成 ${needForTen} 和 ${rem}，${a} 加 ${needForTen} 凑成 10，10 加 ${rem} 就等于 ${total}！`;
@@ -2179,6 +2666,7 @@ class MathGameApp {
       praiseText,
       trapValue,
       trapHint,
+      shortTrapVoice,
       type: 'ktest',
       subType: 'q1'
     };
@@ -2248,6 +2736,7 @@ class MathGameApp {
 
   // 真题题型 2: 多级连环数字分合图 (左款自上而下连环拆、右款自左向右连环合，进退位高阶数域)
   buildKTestQ2ChainedBonds(stage) {
+    const isEasy10 = this.difficulty === '10';
     const isLeftStyle = Math.random() < 0.5;
 
     const card = document.createElement('div');
@@ -2255,12 +2744,12 @@ class MathGameApp {
 
     if (isLeftStyle) {
       // 试卷左图：顶圆 Whole -> 左中 Mid & 右中 P1；左中 Mid -> 左下 P2 & 右下 P3
-      const maxWhole = this.difficulty === '100' ? 22 : 17;
-      const minWhole = this.difficulty === '100' ? 14 : 11;
+      const maxWhole = isEasy10 ? 11 : (this.difficulty === '100' ? 22 : 17);
+      const minWhole = isEasy10 ? 8 : (this.difficulty === '100' ? 14 : 11);
       const whole = Math.floor(Math.random() * (maxWhole - minWhole + 1)) + minWhole;
-      const p1 = Math.floor(Math.random() * 5) + 3;    // 3 ~ 7
-      const mid = whole - p1;                          // >= 4
-      const p2 = Math.floor(Math.random() * Math.max(1, mid - 3)) + 2;
+      const p1 = isEasy10 ? (Math.floor(Math.random() * 3) + 2) : (Math.floor(Math.random() * 5) + 3);
+      const mid = whole - p1;
+      const p2 = Math.floor(Math.random() * Math.max(1, mid - 2)) + 1;
       const p3 = mid - p2;
 
       const askMid = Math.random() < 0.45;
@@ -2271,8 +2760,8 @@ class MathGameApp {
         : `连环数键：${whole} 分成 ${mid} 和 ${p1}，那 ${mid} 再分成 ${p2} 和几呢？`;
 
       const audioPrompt = askMid
-        ? `连环数键分合图：顶上的 ${whole} 分成几和 ${p1} 呢？下面还能看到它分成了 ${p2} 和 ${p3} 哦！`
-        : `连环数键分合图：${whole} 分成 ${mid} 和 ${p1}，中间的 ${mid} 又分成 ${p2} 和几呢？`;
+        ? `连环数键：顶上的 ${whole} 分成几和 ${p1}？`
+        : `连环数键：${whole} 分成 ${mid} 和 ${p1}，${mid} 又分成 ${p2} 和几？`;
 
       const praiseText = `完全正确！${whole} 分成 ${mid} 和 ${p1}，${mid} 再分成 ${p2} 和 ${p3}！`;
 
@@ -2282,6 +2771,7 @@ class MathGameApp {
         praiseText,
         trapValue: !askMid ? mid : undefined,
         trapHint: !askMid ? `${mid} 是第一层拆出来的中间数哦，还要再算 ${mid} 减 ${p2} 等于几呢！` : null,
+        shortTrapVoice: !askMid ? '还要算第二层分合哦！' : null,
         type: 'ktest',
         subType: 'q2'
       };
@@ -2320,11 +2810,12 @@ class MathGameApp {
 
     } else {
       // 试卷右图：左上 A + 左下 B -> 中间 Mid；中间 Mid + 下方 C -> 右侧总数 Whole
-      const maxPart = this.difficulty === '100' ? 9 : 7;
-      const a = Math.floor(Math.random() * (maxPart - 2)) + 3; // 3 ~ maxPart
-      const b = Math.floor(Math.random() * (maxPart - 2)) + 3;
+      const maxPart = isEasy10 ? 4 : (this.difficulty === '100' ? 9 : 7);
+      const minPart = isEasy10 ? 2 : 3;
+      const a = Math.floor(Math.random() * (maxPart - minPart + 1)) + minPart;
+      const b = Math.floor(Math.random() * (maxPart - minPart + 1)) + minPart;
       const mid = a + b;
-      const c = Math.floor(Math.random() * 6) + 3;             // 3 ~ 8
+      const c = isEasy10 ? (Math.floor(Math.random() * 3) + 2) : (Math.floor(Math.random() * 6) + 3);
       const whole = mid + c;
 
       const askMid = Math.random() < 0.45;
@@ -2335,8 +2826,8 @@ class MathGameApp {
         : `连环数键：${a} 和 ${b} 合起来是 ${mid}，那 ${mid} 再和几合起来是 ${whole}？`;
 
       const audioPrompt = askMid
-        ? `连环数键分合图：左边的 ${a} 和 ${b} 合起来等于中间的几呢？`
-        : `连环数键分合图：${a} 加 ${b} 等于 ${mid}，${mid} 再加下面圆圈里的几等于最右边的 ${whole} 呢？`;
+        ? `连环数键：左边的 ${a} 和 ${b} 合起来等于几？`
+        : `连环数键：${a} 加 ${b} 得 ${mid}，${mid} 再加几等于 ${whole}？`;
 
       const praiseText = `太聪明啦！${a} 和 ${b} 合起来是 ${mid}，${mid} 和 ${c} 合起来就是 ${whole}！`;
 
@@ -2348,6 +2839,7 @@ class MathGameApp {
         trapHint: !askMid
           ? `${mid} 是左边 ${a} + ${b} 的和哦，再想一想 ${mid} 加几才等于最右边的 ${whole}？`
           : `问号在中间的圆圈里哦，只需要把左边的 ${a} 和 ${b} 合起来就可以啦！`,
+        shortTrapVoice: '看清问号在哪个圆圈哦！',
         type: 'ktest',
         subType: 'q2'
       };
@@ -2388,7 +2880,10 @@ class MathGameApp {
 
   // 真题题型 3: 一图四式 (给定3个打乱的数字盒，由孩子自己动手组合出2道加法和2道减法算式)
   buildKTestQ3FactFamily(stage) {
-    // 全面升级为进退位数族，彻底告别简单小数字
+    const pairs10 = [
+      [5, 3], [6, 2], [6, 3], [7, 2],
+      [7, 3], [6, 4], [8, 2], [5, 4]
+    ];
     const pairs20 = [
       [8, 5], [9, 4], [9, 5], [7, 5], [8, 6],
       [9, 6], [7, 6], [8, 7], [9, 7], [8, 3]
@@ -2397,7 +2892,9 @@ class MathGameApp {
       [9, 6], [8, 7], [9, 7], [9, 8], [11, 5],
       [12, 5], [11, 6], [13, 4], [12, 7], [14, 5]
     ];
-    const pairs = this.difficulty === '100' ? pairs100 : pairs20;
+    const pairs = this.difficulty === '10'
+      ? pairs10
+      : (this.difficulty === '100' ? pairs100 : pairs20);
     const [a, b] = pairs[Math.floor(Math.random() * pairs.length)];
     const c = a + b;
 
@@ -2418,7 +2915,7 @@ class MathGameApp {
     let isLocked = false;
 
     const titleZh = `一图四式：用 [${shuffledCards[0]}]、[${shuffledCards[1]}]、[${shuffledCards[2]}] 自己组合出 2 道加法和 2 道减法！`;
-    const audioPrompt = `一图四式：请用 ${shuffledCards[0]}、${shuffledCards[1]}、${shuffledCards[2]} 这三个数字宝宝，依次点选数字，自己组合出两道不同的加法算式和两道不同的减法算式吧！`;
+    const audioPrompt = `一图四式：用 ${shuffledCards[0]}、${shuffledCards[1]}、${shuffledCards[2]} 拼出两道加法和两道减法吧！`;
     const praiseText = `太厉害啦！你靠自己把 ${c}、${a}、${b} 的两道加法和两道减法全都组合出来啦！`;
 
     this.currentQuestion = {
@@ -2571,23 +3068,29 @@ class MathGameApp {
         if (boxEl) boxEl.classList.add('wobble', 'wrong-eq');
 
         let errMsg;
+        let errVoice;
         if (isDuplicate) {
           errMsg = curEq.op === '+'
             ? `这道加法 ${x} + ${y} = ${z} 已经写过啦！交换前两个加数的位置，试试 ${y} + ${x} = ${z} 吧！`
             : `这道减法 ${x} - ${y} = ${z} 已经写过啦！试试用 ${c} 减去另一个数字宝宝吧！`;
+          errVoice = '这道写过啦，换个顺序！';
         } else if (!usedAllThree) {
           errMsg = `小心哦！算式 ${x} ${curEq.op} ${y} = ${z} 里重复用了同一个数！每道算式都要把 ${c}、${a}、${b} 各用一次哦！`;
+          errVoice = '三个数要各用一次哦！';
         } else if (curEq.op === '-' && x !== c) {
           errMsg = `减法算式要把最大的总数宝宝 ${c} 放在最前面第一个格哦！用 ${c} 去减！`;
+          errVoice = '减法大数放最前！';
         } else if (curEq.op === '+' && z !== c) {
           errMsg = `加法算式要把两个小的数字宝宝加起来，等号最后面填最大的总数宝宝 ${c} 哦！`;
+          errVoice = '加法大数放最后！';
         } else {
           errMsg = `${x} ${curEq.op} ${y} 不等于 ${z} 哦，换个组合再试一次吧！`;
+          errVoice = '算式不对，再试试！';
         }
 
         this.setMascot(errMsg);
         if (!this.speedrunActive) {
-          window.soundManager.speak(errMsg);
+          window.soundManager.speak(errVoice);
         }
         this.feedbackZoneEl.innerHTML = `
           <div class="feedback-badge retry wobble">
@@ -2651,6 +3154,10 @@ class MathGameApp {
 
   // 真题题型 4: 三格数塔 (顶格 = 中格 + 底格，全面聚焦进退位数塔与两位数数塔)
   buildKTestQ4NumberTowers(stage) {
+    const towerPool10 = [
+      [8, 5, 3], [9, 5, 4], [10, 7, 3], [9, 6, 3],
+      [10, 6, 4], [8, 6, 2], [7, 4, 3], [10, 8, 2]
+    ];
     const towerPool20 = [
       [13, 8, 5], [16, 9, 7], [18, 9, 9], [15, 8, 7],
       [14, 8, 6], [17, 9, 8], [12, 7, 5], [11, 6, 5],
@@ -2661,7 +3168,9 @@ class MathGameApp {
       [22, 14, 8], [24, 15, 9], [17, 9, 8], [23, 14, 9],
       [25, 16, 9], [20, 13, 7], [21, 12, 9], [19, 12, 7]
     ];
-    const towerPool = this.difficulty === '100' ? towerPool100 : towerPool20;
+    const towerPool = this.difficulty === '10'
+      ? towerPool10
+      : (this.difficulty === '100' ? towerPool100 : towerPool20);
     const shuffled = this.shuffleArray(towerPool).slice(0, 4);
     const targetTowerIdx = Math.random() < 0.5 ? 2 : 3;
     const [topVal, midVal, botVal] = shuffled[targetTowerIdx];
@@ -2676,8 +3185,8 @@ class MathGameApp {
       : `三格数塔：最顶上是总和 ${topVal}，想一想 ${missingSlot === 'mid' ? `几 + ${botVal} = ${topVal}` : `${midVal} + 几 = ${topVal}`}？`;
 
     const audioPrompt = missingSlot === 'top'
-      ? `三格数塔：数塔下面两个数加起来等于最顶上的数。看看问号那一格，${midVal} 加 ${botVal} 等于几呢？`
-      : `三格数塔：下面两格加起来等于顶上的 ${topVal}。那么 ${topVal} 减 ${missingSlot === 'mid' ? botVal : midVal} 等于几呢？点旁边的示范数塔还可以听规律哦！`;
+      ? `三格数塔：下面两格 ${midVal} 加 ${botVal} 等于顶上的几？`
+      : `三格数塔：顶上是总和 ${topVal}，${topVal} 减 ${missingSlot === 'mid' ? botVal : midVal} 等于几？`;
 
     const praiseText = `太棒啦！在三格数塔里，${midVal} 加 ${botVal} 就等于顶上的 ${topVal}！`;
 
@@ -2686,6 +3195,7 @@ class MathGameApp {
     const trapHint = missingSlot !== 'top'
       ? `小心哦！最顶上的 ${topVal} 已经是总和啦，不能再用 ${topVal} 加 ${knownPart}，应该算 ${topVal} 减 ${knownPart} 哦！`
       : `最顶上一格是下面两格合起来的总和哦，应该算 ${midVal} 加 ${botVal}！`;
+    const shortTrapVoice = missingSlot !== 'top' ? '顶上是总和，要用减法！' : '顶上要把下面两格相加！';
 
     this.currentQuestion = {
       answer: correctAnswer,
@@ -2693,6 +3203,7 @@ class MathGameApp {
       praiseText,
       trapValue,
       trapHint,
+      shortTrapVoice,
       type: 'ktest',
       subType: 'q4'
     };
@@ -2772,6 +3283,7 @@ class MathGameApp {
   // (q5a) "比 13 - 5 多 4 的数是 ___" (双步文字算式推理)
   // (q5b) "14 - 6 = 3 + ___" (双边等式平衡填空)
   buildKTestQ5Challenge(stage, forcedVariant = null) {
+    const isEasy10 = this.difficulty === '10';
     const isVerbalMoreLess = forcedVariant === 'q5a'
       ? true
       : (forcedVariant === 'q5b' ? false : (Math.random() < 0.5));
@@ -2785,26 +3297,34 @@ class MathGameApp {
       const isInnerSub = Math.random() < 0.6;
       let a, b, innerVal;
       if (isInnerSub) {
-        a = this.difficulty === '100'
-          ? Math.floor(Math.random() * 6) + 12  // 12 ~ 17
-          : Math.floor(Math.random() * 6) + 9;  // 9 ~ 14
-        b = Math.floor(Math.random() * 5) + 3;  // 3 ~ 7
+        a = isEasy10
+          ? Math.floor(Math.random() * 4) + 7   // 7 ~ 10
+          : (this.difficulty === '100'
+              ? Math.floor(Math.random() * 6) + 12  // 12 ~ 17
+              : Math.floor(Math.random() * 6) + 9); // 9 ~ 14
+        b = isEasy10
+          ? Math.floor(Math.random() * 3) + 2   // 2 ~ 4
+          : Math.floor(Math.random() * 5) + 3;  // 3 ~ 7
         innerVal = a - b;
       } else {
-        a = this.difficulty === '100'
-          ? Math.floor(Math.random() * 5) + 6   // 6 ~ 10
-          : Math.floor(Math.random() * 5) + 4;  // 4 ~ 8
-        b = Math.floor(Math.random() * 5) + 3;  // 3 ~ 7
+        a = isEasy10
+          ? Math.floor(Math.random() * 4) + 2   // 2 ~ 5
+          : (this.difficulty === '100'
+              ? Math.floor(Math.random() * 5) + 6   // 6 ~ 10
+              : Math.floor(Math.random() * 5) + 4); // 4 ~ 8
+        b = isEasy10
+          ? Math.floor(Math.random() * 3) + 2   // 2 ~ 4
+          : Math.floor(Math.random() * 5) + 3;  // 3 ~ 7
         innerVal = a + b;
       }
       const delta = isMore
-        ? Math.floor(Math.random() * 5) + 2
-        : Math.max(2, Math.min(6, innerVal - 2));
+        ? (isEasy10 ? Math.floor(Math.random() * 3) + 1 : Math.floor(Math.random() * 5) + 2)
+        : Math.max(1, Math.min(isEasy10 ? 3 : 6, innerVal - 2));
       const innerExpr = isInnerSub ? `${a} - ${b}` : `${a} + ${b}`;
       const correctAnswer = isMore ? innerVal + delta : innerVal - delta;
 
       const zhSentence = `思维挑战：比 (${innerExpr}) ${isMore ? '多' : '少'} ${delta} 的数是几？`;
-      const audioPrompt = `思维挑战：比 ${a} ${isInnerSub ? '减' : '加'} ${b} ${isMore ? '多' : '少'} ${delta} 的数是几？先算出 ${a} ${isInnerSub ? '减' : '加'} ${b} 等于 ${innerVal}，再算比 ${innerVal} ${isMore ? '多' : '少'} ${delta} 的数是几呢？`;
+      const audioPrompt = `比 ${a} ${isInnerSub ? '减' : '加'} ${b} ${isMore ? '多' : '少'} ${delta} 的数是几？`;
       const praiseText = `太厉害啦！先算 ${innerExpr} 等于 ${innerVal}，比 ${innerVal} ${isMore ? '多' : '少'} ${delta}，就是 ${innerVal} ${isMore ? '加' : '减'} ${delta} 等于 ${correctAnswer}！`;
 
       const trapValue = innerVal;
@@ -2816,6 +3336,7 @@ class MathGameApp {
         praiseText,
         trapValue,
         trapHint,
+        shortTrapVoice: '还要再算第二步哦！',
         type: 'ktest',
         subType: 'q5a'
       };
@@ -2867,20 +3388,28 @@ class MathGameApp {
       const isLeftSub = Math.random() < 0.6;
       let a, b, midVal;
       if (isLeftSub) {
-        a = this.difficulty === '100'
-          ? Math.floor(Math.random() * 6) + 12 // 12 ~ 17
-          : Math.floor(Math.random() * 6) + 9; // 9 ~ 14
-        b = Math.floor(Math.random() * 5) + 3; // 3 ~ 7
+        a = isEasy10
+          ? Math.floor(Math.random() * 4) + 7  // 7 ~ 10
+          : (this.difficulty === '100'
+              ? Math.floor(Math.random() * 6) + 12 // 12 ~ 17
+              : Math.floor(Math.random() * 6) + 9); // 9 ~ 14
+        b = isEasy10
+          ? Math.floor(Math.random() * 3) + 2  // 2 ~ 4
+          : Math.floor(Math.random() * 5) + 3; // 3 ~ 7
         midVal = a - b;
       } else {
-        a = this.difficulty === '100'
-          ? Math.floor(Math.random() * 5) + 6  // 6 ~ 10
-          : Math.floor(Math.random() * 5) + 4; // 4 ~ 8
-        b = Math.floor(Math.random() * 5) + 3; // 3 ~ 7
+        a = isEasy10
+          ? Math.floor(Math.random() * 4) + 2  // 2 ~ 5
+          : (this.difficulty === '100'
+              ? Math.floor(Math.random() * 5) + 6  // 6 ~ 10
+              : Math.floor(Math.random() * 5) + 4); // 4 ~ 8
+        b = isEasy10
+          ? Math.floor(Math.random() * 3) + 2  // 2 ~ 4
+          : Math.floor(Math.random() * 5) + 3; // 3 ~ 7
         midVal = a + b;
       }
 
-      const isRightAdd = Math.random() < 0.65;
+      const isRightAdd = isEasy10 ? true : (Math.random() < 0.65);
       let c, correctAnswer;
       if (isRightAdd) {
         c = Math.floor(Math.random() * Math.max(1, midVal - 2)) + 1;
@@ -2894,7 +3423,7 @@ class MathGameApp {
       const rightOp = isRightAdd ? '+' : '-';
 
       const titleZh = `等式天平：等号两边得数要一样大！${leftExpr} = ${c} ${rightOp} 几？`;
-      const audioPrompt = `等式天平挑战：${a} ${isLeftSub ? '减' : '加'} ${b} 等于 ${c} ${isRightAdd ? '加' : '减'} 几呢？先算出等号左边等于 ${midVal}，再想右边 ${c} ${isRightAdd ? '加' : '减'} 几也等于 ${midVal} 吧！`;
+      const audioPrompt = `等式天平：${a} ${isLeftSub ? '减' : '加'} ${b} 等于 ${c} ${isRightAdd ? '加' : '减'} 几？`;
       const praiseText = `太牛啦！等号左边 ${leftExpr} 等于 ${midVal}，右边 ${c} ${rightOp} ${correctAnswer} 也等于 ${midVal}，两边完全平衡！`;
 
       // 针对最常见错因：把左边的得数 midVal 直接填进横线 (例如 12 - 4 = 3 + 8)
@@ -2909,6 +3438,7 @@ class MathGameApp {
         praiseText,
         trapValue,
         trapHint,
+        shortTrapVoice: trapValue !== undefined ? '看清等号右边还有数哦！' : null,
         type: 'ktest',
         subType: 'q5b'
       };
@@ -3052,7 +3582,7 @@ class MathGameApp {
       this.speedrunSummaryModal.classList.add('active');
     }
 
-    window.soundManager.speak(`时间到！你获得了 ${this.speedrunScore} 分，赢得 ${earnedStars} 颗小金星！`);
+    window.soundManager.speak(`时间到！得分 ${this.speedrunScore} 分！`);
   }
 
   // ================= 通用选项渲染与作答校验 (认知近似干扰项 + 升序排列) =================
@@ -3210,33 +3740,38 @@ class MathGameApp {
       this.stars++;
       this.saveStars();
 
-      const praises = [
+      // 视觉气泡保留详细解题复盘，语音仅播报 3~6 字极短夸奖（已预热 0 延迟），大幅缩短切题等待
+      const shortVoicePool = ['答对啦！', '太棒啦！', '真聪明！', '算得真准！', '好厉害！'];
+      let voicePraise = shortVoicePool[Math.floor(Math.random() * shortVoicePool.length)];
+
+      const visualPraises = [
         '太棒啦！你真聪明！🎉',
         '哇！完全正确，思维真敏捷！⭐',
         '算得又快又准，给你大拇指！👍',
-        '太厉害啦，高阶难题都被你攻克了！🌟',
+        '太厉害啦，这道题也被你攻克了！🌟',
         '答对啦！离扭蛋又近一步了！🎁'
       ];
-      let praise = praises[Math.floor(Math.random() * praises.length)];
+      let mascotPraise = visualPraises[Math.floor(Math.random() * visualPraises.length)];
 
       if (this.currentQuestion && this.currentQuestion.praiseText) {
-        praise = this.currentQuestion.praiseText;
+        mascotPraise = this.currentQuestion.praiseText;
       } else if (qType === 'clock' && this.currentQuestion) {
         const { hour, minute } = this.currentQuestion;
-        praise = minute === 0
+        mascotPraise = minute === 0
           ? `答对啦！结果就是 ${hour} 点整！`
           : (minute === 30
               ? `太棒啦！结果就是 ${hour} 点半！`
               : `完全正确！结果正是 ${hour} 点 ${minute} 分！`);
       } else if (this.streak > 1 && this.streak % 3 === 0) {
-        praise = `太神奇了！连续答对 ${this.streak} 题，已开启高阶学霸挑战！🎊`;
+        mascotPraise = `太神奇了！连续答对 ${this.streak} 题！🎊`;
       }
 
       if (this.streak > 1 && this.streak % 3 === 0) {
         window.soundManager.playFanfare();
+        voicePraise = '连对啦，超棒！';
       }
 
-      this.setMascot(praise);
+      this.setMascot(mascotPraise);
 
       this.feedbackZoneEl.innerHTML = `
         <div class="feedback-badge success bounce-in" style="cursor:pointer;" title="点击立即进入下一题">
@@ -3252,19 +3787,19 @@ class MathGameApp {
         });
       }
 
-      // 等待夸奖语音完整播报完毕后再跳转下一题，彻底杜绝语音被下一题读题截断
+      // 播完简短夸奖（约 0.8 秒）即刻进入下一题，节奏轻快不拖沓
       const transitionId = ++this.transitionSeq;
-      const minDisplayPromise = new Promise((resolve) => setTimeout(resolve, 1400));
+      const minDisplayPromise = new Promise((resolve) => setTimeout(resolve, 750));
       const speechPromise = window.soundManager.voiceEnabled
         ? Promise.race([
-            Promise.resolve(window.soundManager.speak(praise)).catch(() => {}),
-            new Promise((resolve) => setTimeout(resolve, 6800))
+            Promise.resolve(window.soundManager.speak(voicePraise)).catch(() => {}),
+            new Promise((resolve) => setTimeout(resolve, 2200))
           ])
         : Promise.resolve();
 
       Promise.all([minDisplayPromise, speechPromise]).then(() => {
         if (this.transitionSeq !== transitionId) return;
-        const postSpeechDelay = window.soundManager.voiceEnabled ? 380 : 50;
+        const postSpeechDelay = window.soundManager.voiceEnabled ? 120 : 50;
         this.nextQuestionTimer = setTimeout(() => {
           if (this.transitionSeq === transitionId) {
             this.generateQuestion();
@@ -3291,9 +3826,11 @@ class MathGameApp {
       const encouragements = [
         '差一点点哦，再仔细算算看！💪',
         '没关系，再看一眼题目，你一定行！🌸',
-        '不要着急，深呼吸再试一次吧！☀️'
+        '不要着急，再试一次吧！☀️'
       ];
+      const shortWrongPool = ['再算算看！', '差一点点哦！'];
       let encText = encouragements[Math.floor(Math.random() * encouragements.length)];
+      let shortVoiceEnc = shortWrongPool[Math.floor(Math.random() * shortWrongPool.length)];
       if (
         this.currentQuestion &&
         this.currentQuestion.trapValue !== undefined &&
@@ -3301,10 +3838,11 @@ class MathGameApp {
         this.currentQuestion.trapHint
       ) {
         encText = this.currentQuestion.trapHint;
+        shortVoiceEnc = this.currentQuestion.shortTrapVoice || '小心陷阱，再算算！';
       }
       this.setMascot(encText);
       if (!this.speedrunActive) {
-        window.soundManager.speak(encText);
+        window.soundManager.speak(shortVoiceEnc);
       }
 
       this.feedbackZoneEl.innerHTML = `
@@ -3399,8 +3937,8 @@ class MathGameApp {
       `;
 
       const voiceMsg = isNew
-        ? `恭喜你！解锁了新伙伴：${randomSticker.name}！${randomSticker.soundText}`
-        : `获得了可爱的${randomSticker.name}！`;
+        ? `新伙伴：${randomSticker.name}！`
+        : `抽到${randomSticker.name}！`;
       window.soundManager.speak(voiceMsg);
 
       const remainingStars = this.stars;
@@ -3604,7 +4142,7 @@ class MathGameApp {
 
     const updateInstallBtnVisibility = () => {
       if (!installBtn) return;
-      installBtn.style.display = isStandalone() ? 'none' : 'inline-flex';
+      installBtn.style.display = isStandalone() ? 'none' : 'flex';
     };
     updateInstallBtnVisibility();
 
@@ -3632,6 +4170,7 @@ class MathGameApp {
           this.deferredInstallPrompt = null;
           return;
         }
+        if (this.settingsModal) this.settingsModal.classList.remove('active');
         if (installModal) {
           installModal.classList.add('active');
         }

@@ -17,7 +17,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261106_smart_v5">
+  <link rel="stylesheet" href="css/style.css?v=20261106_settings_v6">
 </head>
 <body>
 
@@ -79,23 +79,9 @@
           <span>⚡ 60秒冲刺</span>
         </button>
 
-        <!-- 家长指导指南 -->
-        <button id="parent-guide-btn" class="candy-btn btn-info" title="查看6岁儿童数学启蒙高阶指导建议">
-          <span>💡 导学</span>
-        </button>
-
-        <!-- 声音、AI在线语音与全屏/安装App -->
-        <button id="sound-toggle" class="candy-btn btn-secondary" data-no-tts="true" title="开启或关闭音效">
-          🔊 声音
-        </button>
-        <button id="voice-toggle" class="candy-btn btn-secondary" data-no-tts="true" title="开启或关闭温柔姐姐晓晓 AI 语音朗读">
-          🗣️ 读题开
-        </button>
-        <button id="pwa-install-btn" class="candy-btn btn-pwa-install" data-no-tts="true" title="安装到手机或iPad主屏幕，离线全屏畅玩">
-          📲 装到桌面
-        </button>
-        <button id="fullscreen-toggle" class="candy-btn btn-secondary" data-no-tts="true" title="切换全屏模式">
-          🔳 全屏玩
+        <!-- 设置中心入口 (题型、难度、全屏、声音等集中管理) -->
+        <button id="settings-btn" class="candy-btn btn-settings" data-no-tts="true" title="打开设置：自选题型、调节难度、切换全屏与语音">
+          <span>⚙️ 设置</span>
         </button>
       </div>
     </header>
@@ -307,11 +293,119 @@
     </div>
   </div>
 
+  <!-- 弹窗 6: 游戏设置中心 (题型多选、难度调节、全屏、音效与家长锁) -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal-card settings-modal-card">
+      <button class="close-modal-btn" aria-label="关闭">&times;</button>
+      <div class="modal-title">⚙️ 游戏与题库设置</div>
+      <div class="modal-subtitle">自由定制度身题库、难度档位与画面声音</div>
+
+      <div class="settings-scroll-body">
+        <!-- 1. 画面、声音与实用功能 -->
+        <div class="settings-section">
+          <div class="settings-sec-header">
+            <span class="settings-sec-title">🎛️ 画面、声音与实用工具</span>
+          </div>
+          <div class="settings-quick-grid">
+            <button type="button" id="fullscreen-toggle" class="settings-toggle-tile" data-no-tts="true">
+              <span class="tile-icon">🔳</span>
+              <span class="tile-label" id="fullscreen-label">开启全屏</span>
+            </button>
+            <button type="button" id="sound-toggle" class="settings-toggle-tile active" data-no-tts="true">
+              <span class="tile-icon" id="sound-icon">🔊</span>
+              <span class="tile-label" id="sound-label">音效：开启</span>
+            </button>
+            <button type="button" id="voice-toggle" class="settings-toggle-tile active" data-no-tts="true">
+              <span class="tile-icon" id="voice-icon">🗣️</span>
+              <span class="tile-label" id="voice-label">读题：开启</span>
+            </button>
+            <button type="button" id="voice-role-btn" class="settings-toggle-tile" data-no-tts="true">
+              <span class="tile-icon" id="voice-role-icon">🎙️</span>
+              <span class="tile-label" id="voice-role-label">切换语音音色</span>
+            </button>
+            <button type="button" id="parent-lock-toggle" class="settings-toggle-tile" data-no-tts="true">
+              <span class="tile-icon" id="parent-lock-icon">🔓</span>
+              <span class="tile-label" id="parent-lock-label">家长锁：关闭</span>
+            </button>
+            <button type="button" id="pwa-install-btn" class="settings-toggle-tile" data-no-tts="true">
+              <span class="tile-icon">📲</span>
+              <span class="tile-label">装到桌面</span>
+            </button>
+            <button type="button" id="parent-guide-btn" class="settings-toggle-tile" data-no-tts="true">
+              <span class="tile-icon">💡</span>
+              <span class="tile-label">启蒙导学指南</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. 难度档位选择 -->
+        <div class="settings-section">
+          <div class="settings-sec-header">
+            <span class="settings-sec-title">🎯 难度档位</span>
+            <span class="settings-sec-sub">选择智能自适应或固定难度</span>
+          </div>
+          <div class="settings-diff-grid" id="settings-difficulty-grid">
+            <button type="button" class="settings-diff-card active" data-diff="auto" data-no-tts="true">
+              <div class="diff-card-title">🧠 智能自适应 <span class="rec-tag">推荐</span></div>
+              <div class="diff-card-desc">连对自动升阶 · 答错靶向巩固</div>
+            </button>
+            <button type="button" class="settings-diff-card" data-diff="10" data-no-tts="true">
+              <div class="diff-card-title">🌱 基础热身</div>
+              <div class="diff-card-desc">10~15 以内温和入门建立信心</div>
+            </button>
+            <button type="button" class="settings-diff-card" data-diff="20" data-no-tts="true">
+              <div class="diff-card-title">🚀 进阶突破</div>
+              <div class="diff-card-desc">20 以内凑十破十与逆向思考</div>
+            </button>
+            <button type="button" class="settings-diff-card" data-diff="100" data-no-tts="true">
+              <div class="diff-card-title">🔥 高阶学霸</div>
+              <div class="diff-card-desc">两位数进退位与多步深度推理</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. 题型范围配置 -->
+        <div class="settings-section">
+          <div class="settings-sec-header">
+            <span class="settings-sec-title">📚 出题题型范围</span>
+            <span class="settings-sec-sub" id="settings-skill-count">已选 16 / 16 项</span>
+          </div>
+          <div class="settings-preset-bar">
+            <button type="button" class="settings-preset-btn" data-preset="all" data-no-tts="true">✨ 全选综合</button>
+            <button type="button" class="settings-preset-btn" data-preset="ktest" data-no-tts="true">🎓 仅 K班真题</button>
+            <button type="button" class="settings-preset-btn" data-preset="calc" data-no-tts="true">🧮 仅计算数感</button>
+            <button type="button" class="settings-preset-btn" data-preset="visual" data-no-tts="true">🧩 仅图形空间时钟</button>
+            <button type="button" class="settings-preset-btn" data-preset="single" data-no-tts="true">🎯 单项专练</button>
+          </div>
+          <div id="settings-tip-msg" class="settings-tip-msg" style="display:none;"></div>
+          <div id="settings-skills-container" class="settings-skills-container">
+            <!-- 动态渲染分组题型多选芯片 -->
+          </div>
+        </div>
+      </div>
+
+      <button type="button" id="settings-apply-btn" class="draw-action-btn settings-apply-btn" data-no-tts="true">
+        ✅ 保存设置并出新题
+      </button>
+    </div>
+  </div>
+
+  <!-- 弹窗 7: 家长锁验证弹窗 (仅当在设置中主动开启“家长锁”后生效，防止孩子自己偷改简单题) -->
+  <div class="modal-overlay" id="parent-gate-modal">
+    <div class="modal-card parent-gate-card">
+      <button class="close-modal-btn" aria-label="关闭">&times;</button>
+      <div class="modal-title">🔒 家长验证</div>
+      <div class="modal-subtitle">请算出下方乘法题解锁设置页面</div>
+      <div class="parent-gate-question" id="parent-gate-question">7 × 8 = ?</div>
+      <div class="parent-gate-options" id="parent-gate-options"></div>
+    </div>
+  </div>
+
   <!-- 脚本加载 (带版本号强制刷新缓存) -->
-  <script src="lib/web-natural-tts.js?v=20261106_smart_v5"></script>
-  <script src="lib/web-online-tts.js?v=20261106_smart_v5"></script>
-  <script src="js/audio.js?v=20261106_smart_v5"></script>
-  <script src="js/confetti.js?v=20261106_smart_v5"></script>
-  <script src="js/game.js?v=20261106_smart_v5"></script>
+  <script src="lib/web-natural-tts.js?v=20261106_settings_v6"></script>
+  <script src="lib/web-online-tts.js?v=20261106_settings_v6"></script>
+  <script src="js/audio.js?v=20261106_settings_v6"></script>
+  <script src="js/confetti.js?v=20261106_settings_v6"></script>
+  <script src="js/game.js?v=20261106_settings_v6"></script>
 </body>
 </html>

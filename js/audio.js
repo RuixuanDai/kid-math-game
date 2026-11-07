@@ -2,7 +2,7 @@
 class SoundManager {
   constructor() {
     this.ctx = null;
-    this.soundEnabled = true;
+    this.soundEnabled = localStorage.getItem('kid_math_sound_enabled') !== 'false';
     this.voiceEnabled = true;
     this.onlineTts = null;
     this.tts = null;
@@ -10,6 +10,12 @@ class SoundManager {
     this.prewarmed = false;
     this.initAudioContext();
     this.initTTS();
+  }
+
+  setSoundEnabled(enabled) {
+    this.soundEnabled = Boolean(enabled);
+    localStorage.setItem('kid_math_sound_enabled', this.soundEnabled ? 'true' : 'false');
+    return this.soundEnabled;
   }
 
   initAudioContext() {
@@ -29,14 +35,14 @@ class SoundManager {
       if (!this.prewarmed) {
         this.prewarmed = true;
         this.onlineTts.prewarm([
-          '太棒啦！你真聪明！',
-          '哇！完全正确，思维真敏捷！',
-          '算得又快又准，给你大拇指！',
-          '太厉害啦，难题都被你攻克了！',
-          '答对啦！离扭蛋又近一步了！',
-          '差一点点哦，再仔细算算看！',
-          '没关系，再看一眼题目，你一定行！',
-          '不要着急，深呼吸再试一次吧！'
+          '答对啦！',
+          '太棒啦！',
+          '真聪明！',
+          '算得真准！',
+          '好厉害！',
+          '连对啦，超棒！',
+          '再算算看！',
+          '差一点点哦！'
         ]);
       }
     } else if (this.tts && typeof this.tts.unlock === 'function') {
@@ -49,7 +55,7 @@ class SoundManager {
       this.onlineTts = new window.OnlineNeuralTTS({
         endpoint: '/api/tts',
         fallbackEndpoint: 'https://kid-math-game.pages.dev/api/tts',
-        rate: '-2%',
+        rate: '+2%',
         autoUnlock: true
       });
       this.voiceEnabled = !this.onlineTts.muted;
@@ -60,7 +66,7 @@ class SoundManager {
     if (typeof window.NaturalTTS === 'function') {
       this.tts = new window.NaturalTTS({
         lang: 'zh-CN',
-        rate: 0.92,
+        rate: 0.98,
         pitch: 1.0,
         volume: 1.0,
         filterEmojis: true,
