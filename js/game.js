@@ -2420,7 +2420,7 @@ class MathGameApp {
     }
   }
 
-  // 真题题型 3: 一图四式 (给定3个数字盒如 [8] [5] [3]，完成2道加法和2道减法)
+  // 真题题型 3: 一图四式 (给定3个数字盒如 [8] [5] [3]，由孩子自己动手组合出2道加法和2道减法算式)
   buildKTestQ3FactFamily(stage) {
     // 选择不相等的两个部分 a > b，避免 a === b 时只有两道算式
     const pairs10 = [[5, 3], [6, 2], [6, 3], [6, 4], [7, 2], [7, 3], [5, 4]];
@@ -2429,39 +2429,30 @@ class MathGameApp {
     const [a, b] = pairs[Math.floor(Math.random() * pairs.length)];
     const c = a + b;
 
-    // 4道标准一图四式 (优先重点强化第3、第4道减法，针对孩子试卷中 8 - 3 = 3 的易错点！)
-    const equations = [
-      { id: 0, left1: a, op: '+', left2: b, right: c, isSub: false },
-      { id: 1, left1: b, op: '+', left2: a, right: c, isSub: false },
-      { id: 2, left1: c, op: '-', left2: a, right: b, isSub: true },
-      { id: 3, left1: c, op: '-', left2: b, right: a, isSub: true }
+    // 将 3 个数字打乱顺序展示在顶部，需要孩子自己判断谁是总数、谁是部分
+    const shuffledCards = [c, a, b].sort(() => 0.5 - Math.random());
+    const sortedTargetKey = [a, b, c].slice().sort((m, n) => m - n).join(',');
+
+    // 4道待拼搭的算式状态 (在极速冲刺模式下预填前3道，只拼第4道以适配计时节奏；常规真题模式下4道全部由孩子亲手组合！)
+    const eqStates = [
+      { idx: 0, op: '+', label: '➕ 加法 ①', slots: this.speedrunActive ? [a, b, c] : [null, null, null], solved: this.speedrunActive },
+      { idx: 1, op: '+', label: '➕ 加法 ②', slots: this.speedrunActive ? [b, a, c] : [null, null, null], solved: this.speedrunActive },
+      { idx: 2, op: '-', label: '➖ 减法 ①', slots: this.speedrunActive ? [c, a, b] : [null, null, null], solved: this.speedrunActive },
+      { idx: 3, op: '-', label: '➖ 减法 ②', slots: [null, null, null], solved: false }
     ];
 
-    // 75% 概率考减法算式 (尤其是第4道 C - B = A)，25% 概率考加法算式
-    const targetEqIdx = Math.random() < 0.75 ? (Math.random() < 0.65 ? 3 : 2) : (Math.random() < 0.5 ? 0 : 1);
-    const targetEq = equations[targetEqIdx];
+    let activeEqIdx = this.speedrunActive ? 3 : 0;
+    let activeSlotIdx = 0;
+    let isLocked = false;
 
-    // 决定挖空位置：70% 挖等号右边结果 (如 8 - 3 = [ ? ])，30% 挖被减数或加数 (如 [ ? ] - 3 = 5)
-    const hideResult = Math.random() < 0.72;
-    const correctAnswer = hideResult ? targetEq.right : (targetEq.isSub ? targetEq.left1 : targetEq.left2);
-    const trapValue = (targetEq.isSub && hideResult) ? targetEq.left2 : undefined;
-    const trapHint = trapValue !== undefined
-      ? `小心哦！${c} 减 ${targetEq.left2} 不能等于 ${targetEq.left2} 啦！看上面的三个数字宝宝 ${c}、${a}、${b}，用掉了 ${c} 和 ${targetEq.left2}，还剩下哪一个数字宝宝呢？`
-      : null;
-
-    const titleZh = `一图四式：只用 [${c}]、[${a}]、[${b}] 这三个数字宝宝，补全算式里的问号！`;
-    const audioPrompt = hideResult
-      ? `一图四式：只能用 ${c}、${a}、${b} 这三个数字宝宝，写出两道加法和两道减法。看闪烁的方框：${targetEq.left1} ${targetEq.op === '+' ? '加' : '减'} ${targetEq.left2} 等于几呢？`
-      : `一图四式：只用 ${c}、${a}、${b} 这三个数字宝宝，几 ${targetEq.op === '+' ? '加' : '减'} ${targetEq.left2} 等于 ${targetEq.right} 呢？`;
-
-    const praiseText = `太棒啦！${c}、${a}、${b} 是一家人：${a} 加 ${b} 等于 ${c}，反过来 ${c} 减 ${targetEq.left2} 就等于 ${targetEq.right}！`;
+    const titleZh = `一图四式：用 [${shuffledCards[0]}]、[${shuffledCards[1]}]、[${shuffledCards[2]}] 自己组合出 2 道加法和 2 道减法！`;
+    const audioPrompt = `一图四式：请用 ${shuffledCards[0]}、${shuffledCards[1]}、${shuffledCards[2]} 这三个数字宝宝，依次点选数字，自己组合出两道不同的加法算式和两道不同的减法算式吧！`;
+    const praiseText = `太厉害啦！你靠自己把 ${c}、${a}、${b} 的两道加法和两道减法全都组合出来啦！`;
 
     this.currentQuestion = {
-      answer: correctAnswer,
+      answer: 'fact_family_complete',
       audioPrompt,
       praiseText,
-      trapValue,
-      trapHint,
       type: 'ktest',
       subType: 'q3'
     };
@@ -2471,59 +2462,226 @@ class MathGameApp {
     const card = document.createElement('div');
     card.className = 'ktest-card ktest-q3-card';
 
-    const eqHtml = equations.map((eq, idx) => {
-      const isTarget = idx === targetEqIdx;
-      let l1Html = `<span class="ff-num">${eq.left1}</span>`;
-      let l2Html = `<span class="ff-num">${eq.left2}</span>`;
-      let rHtml = `<span class="ff-num">${eq.right}</span>`;
-
-      if (isTarget) {
-        if (hideResult) {
-          rHtml = `<span class="ff-blank ktest-target-slot mystery-pulse">?</span>`;
-        } else if (eq.isSub) {
-          l1Html = `<span class="ff-blank ktest-target-slot mystery-pulse">?</span>`;
-        } else {
-          l2Html = `<span class="ff-blank ktest-target-slot mystery-pulse">?</span>`;
-        }
-      }
-
-      return `
-        <div class="ff-eq-box ${isTarget ? 'target-eq' : 'solved-eq'}">
-          <span class="ff-eq-tag">${eq.isSub ? '➖ 减法' : '➕ 加法'}</span>
-          <div class="ff-eq-formula">
-            ${l1Html}
-            <span class="ff-op">${eq.op}</span>
-            ${l2Html}
-            <span class="ff-op">=</span>
-            ${rHtml}
-          </div>
-        </div>
-      `;
-    }).join('');
-
     card.innerHTML = `
       <div class="ff-top-row">
-        <div class="ff-number-cards">
-          <div class="ff-card whole-card" title="总数宝宝 ${c}">${c}</div>
-          <div class="ff-card part-card" title="部分宝宝 ${a}">${a}</div>
-          <div class="ff-card part-card" title="部分宝宝 ${b}">${b}</div>
+        <div class="ff-number-cards" id="ff-top-cards">
+          ${shuffledCards.map(num => `
+            <button type="button" class="ff-card clickable-ff-card" data-num="${num}" title="点击填入数字 ${num}">${num}</button>
+          `).join('')}
         </div>
-        <div class="ff-rule-badge">💡 秘诀：每道算式都只能用这 3 个数字宝宝！</div>
+        <div class="ff-rule-badge" id="ff-progress-badge">
+          💡 点击下方数字填入方格（已完成 <strong>${eqStates.filter(e => e.solved).length} / 4</strong> 道）
+        </div>
       </div>
-      <div class="ff-equations-grid">
-        ${eqHtml}
-      </div>
+      <div class="ff-equations-grid" id="ff-equations-grid"></div>
     `;
 
     stage.appendChild(card);
 
-    // 选项必须包含家族里的 3 个数 c, a, b，以及一个干扰项，训练孩子从 3 个数中选出还没用过的那个数
-    const optSet = new Set([correctAnswer, c, a, b]);
-    while (optSet.size < 4) {
-      const cand = Math.max(1, correctAnswer + (Math.random() > 0.5 ? 1 : -1) * (optSet.size));
-      if (cand > 0) optSet.add(cand);
-    }
-    this.renderOptions(Array.from(optSet).sort(() => 0.5 - Math.random()), correctAnswer);
+    const gridEl = card.querySelector('#ff-equations-grid');
+    const progressBadgeEl = card.querySelector('#ff-progress-badge');
+
+    const renderEquationsUI = () => {
+      const solvedCount = eqStates.filter(e => e.solved).length;
+      if (progressBadgeEl) {
+        progressBadgeEl.innerHTML = `💡 每道算式把 3 个数各用一次（已完成 <strong>${solvedCount} / 4</strong> 道）`;
+      }
+
+      gridEl.innerHTML = eqStates.map((eq) => {
+        const isCurrentEq = (!eq.solved && eq.idx === activeEqIdx);
+        const boxClass = eq.solved
+          ? 'ff-eq-box solved-eq'
+          : (isCurrentEq ? 'ff-eq-box target-eq' : 'ff-eq-box pending-eq');
+
+        const slotsHtml = [0, 1, 2].map(sIdx => {
+          const val = eq.slots[sIdx];
+          const isCurrentSlot = isCurrentEq && (sIdx === activeSlotIdx);
+          let slotClass = 'ff-slot-btn';
+          if (eq.solved) {
+            slotClass += ' slot-solved';
+          } else if (isCurrentSlot) {
+            slotClass += ' mystery-pulse slot-active';
+          } else if (val !== null) {
+            slotClass += ' slot-filled';
+          } else {
+            slotClass += ' slot-empty';
+          }
+          const displayChar = val !== null ? val : (isCurrentSlot ? '?' : '□');
+          return `<button type="button" class="${slotClass}" data-eq="${eq.idx}" data-slot="${sIdx}" ${eq.solved ? 'disabled' : ''}>${displayChar}</button>`;
+        });
+
+        return `
+          <div class="${boxClass}" id="ff-eq-box-${eq.idx}">
+            <span class="ff-eq-tag">${eq.solved ? '✅ ' : ''}${eq.label}</span>
+            <div class="ff-eq-formula">
+              ${slotsHtml[0]}
+              <span class="ff-op">${eq.op}</span>
+              ${slotsHtml[1]}
+              <span class="ff-op">=</span>
+              ${slotsHtml[2]}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 允许孩子点击任意未完成算式的任意方格直接定位光标
+      gridEl.querySelectorAll('.ff-slot-btn:not(:disabled)').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (isLocked) return;
+          window.soundManager.playPop();
+          activeEqIdx = parseInt(btn.dataset.eq, 10);
+          activeSlotIdx = parseInt(btn.dataset.slot, 10);
+          renderEquationsUI();
+        });
+      });
+    };
+
+    const handleNumberInput = (numVal) => {
+      if (isLocked) return;
+      const curEq = eqStates[activeEqIdx];
+      if (!curEq || curEq.solved) return;
+
+      window.soundManager.playPop();
+      curEq.slots[activeSlotIdx] = numVal;
+
+      // 查找当前算式是否还有未填的空格
+      const nextEmptyIdx = curEq.slots.findIndex((v, i) => v === null && i > activeSlotIdx);
+      const anyEmptyIdx = curEq.slots.findIndex(v => v === null);
+
+      if (nextEmptyIdx !== -1) {
+        activeSlotIdx = nextEmptyIdx;
+        renderEquationsUI();
+        return;
+      }
+      if (anyEmptyIdx !== -1) {
+        activeSlotIdx = anyEmptyIdx;
+        renderEquationsUI();
+        return;
+      }
+
+      // 当前算式 3 个格已填满，立即校验这道算式！
+      renderEquationsUI();
+      const [x, y, z] = curEq.slots;
+      const usedKey = [x, y, z].slice().sort((m, n) => m - n).join(',');
+      const usedAllThree = (usedKey === sortedTargetKey);
+      const isMathTrue = curEq.op === '+' ? (x + y === z) : (x - y === z);
+
+      // 检查是否与同组另一道加法/减法完全重复
+      const siblingIdx = curEq.op === '+' ? (curEq.idx === 0 ? 1 : 0) : (curEq.idx === 2 ? 3 : 2);
+      const siblingEq = eqStates[siblingIdx];
+      const isDuplicate = siblingEq.solved && siblingEq.slots[0] === x && siblingEq.slots[1] === y;
+
+      if (usedAllThree && isMathTrue && !isDuplicate) {
+        curEq.solved = true;
+        const nextUnsolved = eqStates.find(e => !e.solved);
+
+        if (nextUnsolved) {
+          // 还有未完成的算式，给予阶段正反馈并自动跳到下一道算式
+          window.soundManager.playCorrect();
+          activeEqIdx = nextUnsolved.idx;
+          activeSlotIdx = 0;
+          renderEquationsUI();
+
+          const stepMsg = `真棒！${x} ${curEq.op} ${y} = ${z} 正确！请继续组合「${nextUnsolved.label}」吧！`;
+          this.setMascot(stepMsg);
+          this.feedbackZoneEl.innerHTML = `
+            <div class="feedback-badge success bounce-in">
+              <span>✅ 完成 ${eqStates.filter(e => e.solved).length}/4 道！继续拼下一道 👉</span>
+            </div>
+          `;
+        } else {
+          // 4道算式全部拼搭完成！触发满分通关！
+          isLocked = true;
+          renderEquationsUI();
+          const dummyBtn = this.optionsZoneEl.querySelector('.option-card') || document.createElement('button');
+          this.checkAnswer(dummyBtn, 'fact_family_complete', 'fact_family_complete');
+        }
+      } else {
+        // 算式不成立或重复：给出针对性语音与视觉诊断，并清空本道算式重填
+        isLocked = true;
+        window.soundManager.playWrong();
+        const boxEl = document.getElementById(`ff-eq-box-${curEq.idx}`);
+        if (boxEl) boxEl.classList.add('wobble', 'wrong-eq');
+
+        let errMsg;
+        if (isDuplicate) {
+          errMsg = curEq.op === '+'
+            ? `这道加法 ${x} + ${y} = ${z} 已经写过啦！交换前两个加数的位置，试试 ${y} + ${x} = ${z} 吧！`
+            : `这道减法 ${x} - ${y} = ${z} 已经写过啦！试试用 ${c} 减去另一个数字宝宝吧！`;
+        } else if (!usedAllThree) {
+          errMsg = `小心哦！算式 ${x} ${curEq.op} ${y} = ${z} 里重复用了同一个数！每道算式都要把 ${c}、${a}、${b} 各用一次哦！`;
+        } else if (curEq.op === '-' && x !== c) {
+          errMsg = `减法算式要把最大的总数宝宝 ${c} 放在最前面第一个格哦！用 ${c} 去减！`;
+        } else if (curEq.op === '+' && z !== c) {
+          errMsg = `加法算式要把两个小的数字宝宝加起来，等号最后面填最大的总数宝宝 ${c} 哦！`;
+        } else {
+          errMsg = `${x} ${curEq.op} ${y} 不等于 ${z} 哦，换个组合再试一次吧！`;
+        }
+
+        this.setMascot(errMsg);
+        if (!this.speedrunActive) {
+          window.soundManager.speak(errMsg);
+        }
+        this.feedbackZoneEl.innerHTML = `
+          <div class="feedback-badge retry wobble">
+            <span>💡 调整一下顺序再试一次哦！</span>
+          </div>
+        `;
+
+        setTimeout(() => {
+          curEq.slots = [null, null, null];
+          activeSlotIdx = 0;
+          isLocked = false;
+          renderEquationsUI();
+        }, 700);
+      }
+    };
+
+    const handleBackspace = () => {
+      if (isLocked) return;
+      const curEq = eqStates[activeEqIdx];
+      if (!curEq || curEq.solved) return;
+      window.soundManager.playPop();
+
+      if (curEq.slots[activeSlotIdx] !== null) {
+        curEq.slots[activeSlotIdx] = null;
+      } else {
+        for (let i = 2; i >= 0; i--) {
+          if (curEq.slots[i] !== null) {
+            curEq.slots[i] = null;
+            activeSlotIdx = i;
+            break;
+          }
+        }
+      }
+      renderEquationsUI();
+    };
+
+    // 绑定顶部 3 张数字卡点击输入
+    card.querySelectorAll('.clickable-ff-card').forEach(btn => {
+      btn.addEventListener('click', () => {
+        handleNumberInput(parseInt(btn.dataset.num, 10));
+      });
+    });
+
+    // 渲染底部 4 颗操作按钮：3 个数字宝宝 + 1 个「⌫ 退格重填」按钮
+    this.optionsZoneEl.innerHTML = '';
+    shuffledCards.forEach(num => {
+      const btn = document.createElement('button');
+      btn.className = 'option-card number-option-btn';
+      btn.textContent = num;
+      btn.addEventListener('click', () => handleNumberInput(num));
+      this.optionsZoneEl.appendChild(btn);
+    });
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'option-card ff-clear-option-btn';
+    clearBtn.innerHTML = `⌫ 退格`;
+    clearBtn.title = '清除当前算式刚填的数字';
+    clearBtn.addEventListener('click', handleBackspace);
+    this.optionsZoneEl.appendChild(clearBtn);
+
+    renderEquationsUI();
   }
 
   // 真题题型 4: 三格数塔 (顶格 = 中格 + 底格)
