@@ -231,6 +231,31 @@ body {
   border: 2px solid #BAE6FD;
 }
 
+.btn-sprint {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  color: #B45309;
+  border: 2px solid #F59E0B;
+  box-shadow: 0 2px 0 #D97706;
+}
+
+.btn-sprint:hover {
+  background: linear-gradient(135deg, #FDE68A 0%, #FCD34D 100%);
+}
+
+.btn-sprint.active-sprint {
+  background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+  color: #B91C1C;
+  border-color: #EF4444;
+  box-shadow: 0 2px 0 #DC2626;
+}
+
+/* 全局彻底隐藏手动关卡导航、低幼难度切换与真题手动筛选条，交由智能自适应引擎接管 */
+.mode-navigation,
+#difficulty-selector,
+.ktest-filter-bar {
+  display: none !important;
+}
+
 .btn-pwa-install {
   background: linear-gradient(135deg, #DCFCE7 0%, #D1FAE5 100%);
   color: #065F46;
@@ -469,14 +494,43 @@ body {
 }
 
 .difficulty-selector {
-  display: flex;
+  display: none !important;
+}
+
+/* 智能自适应题型与段位只读徽章 */
+.smart-stage-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: #F8FAFC;
-  padding: 3px;
+  gap: 6px;
+  padding: 6px 14px;
   border-radius: 14px;
-  border: 1px solid #E2E8F0;
+  font-size: 14.5px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
+  color: #5B21B6;
+  border: 2px solid #C4B5FD;
+  white-space: nowrap;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.08);
+}
+
+.smart-stage-badge.tier-master {
+  background: linear-gradient(135deg, #FFF1F2 0%, #FFEDD5 100%);
+  color: #C2410C;
+  border-color: #FB923C;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.16);
+}
+
+.smart-stage-badge.tier-review {
+  background: linear-gradient(135deg, #FEFCE8 0%, #FEF3C7 100%);
+  color: #B45309;
+  border-color: #F59E0B;
+}
+
+.smart-stage-badge.tier-sprint {
+  background: linear-gradient(135deg, #FFEDD5 0%, #FED7AA 100%);
+  color: #EA580C;
+  border-color: #F97316;
 }
 
 .diff-btn {
@@ -697,6 +751,21 @@ body {
 .counting-group-box .group-items {
   font-size: 26px;
   letter-spacing: 2px;
+}
+
+.counting-group-box.remainder-group-box {
+  background: #FFFBEB;
+  border: 2.5px dashed #F59E0B;
+}
+
+.counting-group-box.remainder-group-box .group-tag {
+  color: #B45309;
+}
+
+.counting-group-box.remainder-group-box.counted {
+  background: #FEF3C7;
+  border-color: #D97706;
+  border-style: solid;
 }
 
 /* 2. 比大小模式天平 (大号算式与数字) */
@@ -2052,12 +2121,13 @@ body {
 
   #egg-shop-btn,
   #sticker-book-btn,
+  #sprint-toggle-btn,
   #parent-guide-btn,
   #pwa-install-btn {
     order: 6;
-    flex: 1 1 21%;
-    padding: 5px 4px;
-    font-size: 12px;
+    flex: 1 1 18%;
+    padding: 5px 3px;
+    font-size: 11.5px;
     border-radius: 11px;
     white-space: nowrap;
   }
@@ -2137,12 +2207,16 @@ body {
     line-height: 1.25;
   }
 
-  .difficulty-selector {
+  .smart-stage-badge {
     width: 100%;
-    display: flex;
-    gap: 4px;
-    padding: 2px;
+    justify-content: center;
+    padding: 3px 10px;
+    font-size: 12px;
     border-radius: 10px;
+  }
+
+  .difficulty-selector {
+    display: none !important;
   }
 
   .diff-btn {
@@ -2570,6 +2644,12 @@ body {
   .mascot-speech-bubble {
     font-size: 12px;
     padding: 2px 8px;
+  }
+
+  .smart-stage-badge {
+    padding: 2px 10px;
+    font-size: 11.5px;
+    border-radius: 10px;
   }
 
   .diff-btn {
@@ -3096,12 +3176,12 @@ body {
 }
 
 .tower-cell {
-  width: 116px;
-  height: 58px;
+  width: 124px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 34px;
+  font-size: 36px;
   font-weight: 900;
   color: #1E293B;
   border-bottom: 3px solid #1E293B;
@@ -3121,8 +3201,8 @@ body {
   color: #334155;
   border: 2px solid #CBD5E1;
   border-radius: 14px;
-  padding: 5px 14px;
-  font-size: 18px;
+  padding: 6px 16px;
+  font-size: 20px;
   font-weight: 900;
   white-space: nowrap;
 }

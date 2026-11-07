@@ -17,7 +17,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261106_ktest_v4">
+  <link rel="stylesheet" href="css/style.css?v=20261106_smart_v5">
 </head>
 <body>
 
@@ -46,7 +46,7 @@
         <div class="logo-emoji">🦁</div>
         <div>
           <h1>数学小王国</h1>
-          <div class="logo-sub">全能益智版 · 幼小衔接</div>
+          <div class="logo-sub">智能自适应闯关 · 幼小衔接</div>
         </div>
       </div>
 
@@ -74,6 +74,11 @@
           <span>📖 贴纸册</span>
         </button>
 
+        <!-- 60秒极速冲刺切换按钮 -->
+        <button id="sprint-toggle-btn" class="candy-btn btn-sprint" title="开启60秒极速计时挑战">
+          <span>⚡ 60秒冲刺</span>
+        </button>
+
         <!-- 家长指导指南 -->
         <button id="parent-guide-btn" class="candy-btn btn-info" title="查看6岁儿童数学启蒙高阶指导建议">
           <span>💡 导学</span>
@@ -95,45 +100,8 @@
       </div>
     </header>
 
-    <!-- 8大核心关卡导航 (iPad横屏为单排8格流线型布局) -->
-    <nav class="mode-navigation">
-      <button class="mode-nav-btn active" data-mode="counting" title="群计数与进阶点数">
-        <span class="mode-icon">🍓</span>
-        <span class="mode-title">森林数数</span>
-      </button>
-      <button class="mode-nav-btn" data-mode="comparison" title="算式比大小与倒置数对比">
-        <span class="mode-icon">⚖️</span>
-        <span class="mode-title">天平比大小</span>
-      </button>
-      <button class="mode-nav-btn" data-mode="arithmetic" title="进退位运算与未知数填空">
-        <span class="mode-icon">🍩</span>
-        <span class="mode-title">趣味加减</span>
-      </button>
-      <button class="mode-nav-btn" data-mode="patterns" title="跳跃点数与阶梯规律">
-        <span class="mode-icon">🚂</span>
-        <span class="mode-title">规律火车</span>
-      </button>
-      <button class="mode-nav-btn" data-mode="tenframes" title="新加坡数学十格阵凑十法">
-        <span class="mode-icon">🧪</span>
-        <span class="mode-title">十格阵凑十</span>
-      </button>
-      <button class="mode-nav-btn" data-mode="clocks" title="认识指针时钟与整点半点">
-        <span class="mode-icon">⏰</span>
-        <span class="mode-title">奇妙时钟</span>
-      </button>
-      <button class="mode-nav-btn" data-mode="blocks" title="3D等轴测空间积木推理">
-        <span class="mode-icon">🧩</span>
-        <span class="mode-title">空间数积木</span>
-      </button>
-      <button class="mode-nav-btn ktest-nav-btn" data-mode="ktest" title="K班数学测试真题：凑十数键、连环分合、一图四式、三格数塔与压轴挑战">
-        <span class="mode-icon">🎓</span>
-        <span class="mode-title">真题特训</span>
-      </button>
-      <button class="mode-nav-btn sprint-nav-btn" data-mode="speedrun" title="60秒极速计时冲刺">
-        <span class="mode-icon">⚡</span>
-        <span class="mode-title">60秒冲刺</span>
-      </button>
-    </nav>
+    <!-- 关卡导航栏已隐藏：由智能自适应选题引擎全自动科学编排，防止孩子手动跳到简单题 -->
+    <nav class="mode-navigation" style="display:none;" aria-hidden="true"></nav>
 
     <!-- 60秒冲刺悬浮 HUD 状态条 -->
     <div class="speedrun-hud" id="speedrun-hud">
@@ -158,19 +126,20 @@
       </div>
     </div>
 
-    <!-- 萌宠向导提示栏与高难度设置 -->
+    <!-- 萌宠向导提示栏与智能段位徽章 (只读展示，禁止手动切回简单难度) -->
     <div class="mascot-assistant-bar">
       <div class="mascot-avatar">🦊</div>
       <div class="mascot-speech-bubble" id="mascot-message">
-        欢迎来到进阶数学挑战！选择关卡开启高能脑力风暴吧！
+        欢迎来到智能进阶闯关！小狐狸已为你准备好最棒的脑力挑战！
       </div>
 
-      <!-- 难度调节：根据当前模式动态适配标签 -->
-      <div class="difficulty-selector" id="difficulty-selector">
-        <button class="diff-btn" data-diff="10">10以内点数</button>
-        <button class="diff-btn active" data-diff="20">20以内点数</button>
-        <button class="diff-btn" data-diff="100">群组数数(分组)</button>
+      <!-- 智能题型与段位只读徽章 -->
+      <div class="smart-stage-badge" id="smart-stage-badge" title="智能自适应出题引擎根据答题表现自动调配高阶题型与错题巩固">
+        🎓 智能进阶闯关
       </div>
+
+      <!-- 隐藏旧版手动难度切换器 -->
+      <div class="difficulty-selector" id="difficulty-selector" style="display:none;" aria-hidden="true"></div>
     </div>
 
     <!-- 核心互动答题卡片舞台 (全屏自适应，免滚动) -->
@@ -311,8 +280,8 @@
           <p>规律小火车加入 2个一数（2, 4, 6, 8）、5个一数（5, 10, 15, 20）以及递增递减，培养数感敏感度与找规律归纳能力。</p>
         </div>
         <div class="guide-section">
-          <h4>🎓 6. K班国际数学测试真题（数键图·一图四式·数塔·双边等式）</h4>
-          <p>1:1 还原 K Class Math Test 五大核心题型：① 凑十数键分支图（Make Ten Number Bond）、② 多级连环分合图（Chained Number Bonds）、③ 一图四式加减家族（2 Add &amp; 2 Sub Equations）、④ 20以内三格数塔（Number Towers）与 ⑤ 双步多/少文字推理及双边等式平衡（如 8 - 3 = 2 + □），中英双语读题帮孩子轻松拿下满分！</p>
+          <h4>🎓 6. K班测试核心真题与智能自适应引擎</h4>
+          <p>内置 16 类高阶课程牌组（凑十数键、连环分合、自组一图四式、三格数塔、双步推理、双边等式、逆向未知数、双算式天平、双盒凑十破十、阶梯数字规律、3D遮挡数积木、时间推算、群组快数），系统全自动洗牌防重、连对升阶，并对答错题型在 3 题后换新数字靶向巩固！</p>
         </div>
       </div>
     </div>
@@ -339,10 +308,10 @@
   </div>
 
   <!-- 脚本加载 (带版本号强制刷新缓存) -->
-  <script src="lib/web-natural-tts.js?v=20261106_ktest_v4"></script>
-  <script src="lib/web-online-tts.js?v=20261106_ktest_v4"></script>
-  <script src="js/audio.js?v=20261106_ktest_v4"></script>
-  <script src="js/confetti.js?v=20261106_ktest_v4"></script>
-  <script src="js/game.js?v=20261106_ktest_v4"></script>
+  <script src="lib/web-natural-tts.js?v=20261106_smart_v5"></script>
+  <script src="lib/web-online-tts.js?v=20261106_smart_v5"></script>
+  <script src="js/audio.js?v=20261106_smart_v5"></script>
+  <script src="js/confetti.js?v=20261106_smart_v5"></script>
+  <script src="js/game.js?v=20261106_smart_v5"></script>
 </body>
 </html>
