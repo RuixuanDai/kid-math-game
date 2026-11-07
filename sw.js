@@ -1,5 +1,5 @@
 // 童趣数学小王国 - PWA Service Worker (支持离线畅玩 + 自动热更新 + 绕过在线语音动态签名请求)
-const CACHE_NAME = 'kid-math-pwa-v20261106-ktest-v2';
+const CACHE_NAME = 'kid-math-pwa-v20261106-ktest-v3';
 const CORE_ASSETS = [
   './',
   './index.html',

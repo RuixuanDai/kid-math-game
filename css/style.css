@@ -2629,7 +2629,7 @@ body {
 }
 
 /* ==========================================================================
-   关卡 8：K班数学测试真题特训 (K CLASS MATH TEST 1:1 还原与互动升级)
+   关卡 8：K班数学测试真题特训 (K CLASS MATH TEST 大尺寸铺满舞台与高可读性版)
    ========================================================================== */
 .ktest-stage-wrap {
   display: flex;
@@ -2637,30 +2637,30 @@ body {
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 780px;
-  gap: 8px;
+  max-width: 960px;
+  gap: 12px;
 }
 
 .ktest-filter-bar {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   background: #F5F3FF;
-  border: 2px solid #DDD6FE;
-  border-radius: 22px;
-  padding: 4px 8px;
+  border: 2.5px solid #DDD6FE;
+  border-radius: 26px;
+  padding: 6px 12px;
 }
 
 .ktest-filter-pill {
-  border: 1.5px solid transparent;
+  border: 2px solid transparent;
   background: transparent;
   color: #5B21B6;
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 800;
-  padding: 4px 11px;
-  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 900;
+  padding: 6px 16px;
+  border-radius: 18px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -2672,43 +2672,30 @@ body {
 .ktest-filter-pill.active {
   background: #7C3AED;
   color: #FFFFFF;
-  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.3);
-}
-
-.ktest-en-tag {
-  display: inline-block;
-  background: #EDE9FE;
-  color: #5B21B6;
-  font-size: 13.5px;
-  font-weight: 900;
-  padding: 2px 10px;
-  border-radius: 10px;
-  border: 1.5px solid #C4B5FD;
-  margin-right: 6px;
-  vertical-align: middle;
+  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.35);
 }
 
 .ktest-card {
   width: 100%;
   background: linear-gradient(180deg, #FFFFFF 0%, #FAF8FF 100%);
-  border: 3px solid #DDD6FE;
-  border-radius: 24px;
-  padding: 14px 18px;
+  border: 3.5px solid #DDD6FE;
+  border-radius: 28px;
+  padding: 20px 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.08);
+  gap: 16px;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.09);
 }
 
 .ktest-helper-pill {
   background: #FEF3C7;
   color: #92400E;
-  border: 2px dashed #F59E0B;
-  border-radius: 16px;
-  padding: 5px 14px;
-  font-size: 14px;
+  border: 2.5px dashed #F59E0B;
+  border-radius: 18px;
+  padding: 8px 20px;
+  font-size: 17px;
   font-weight: 800;
   cursor: pointer;
   text-align: center;
@@ -2739,28 +2726,28 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 6px 16px 96px;
+  padding: 8px 20px 118px;
 }
 
 .q1-equation-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  font-size: 40px;
+  gap: 20px;
+  font-size: 48px;
   font-weight: 900;
   color: #1E293B;
 }
 
 .q1-num-token {
-  width: 58px;
-  height: 58px;
-  border-radius: 16px;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #F8FAFC;
-  border: 3px solid #CBD5E1;
+  border: 3.5px solid #CBD5E1;
 }
 
 .q1-b-anchor {
@@ -2777,25 +2764,25 @@ body {
 }
 
 .q1-result-box {
-  min-width: 68px;
-  height: 58px;
-  padding: 0 12px;
-  border-radius: 16px;
-  border: 3.5px solid #1E293B;
+  min-width: 84px;
+  height: 72px;
+  padding: 0 16px;
+  border-radius: 20px;
+  border: 4px solid #1E293B;
   background: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 38px;
+  font-size: 46px;
   font-weight: 900;
 }
 
 .q1-bond-under-b {
   position: absolute;
-  top: calc(100% + 1px);
+  top: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
-  width: 140px;
+  width: 176px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2803,42 +2790,42 @@ body {
 
 .q1-maketen-bridge {
   position: absolute;
-  right: calc(100% + 2px);
-  top: 46px;
+  right: calc(100% + 4px);
+  top: 56px;
   white-space: nowrap;
-  padding: 4px 10px;
-  border-radius: 14px;
+  padding: 6px 14px;
+  border-radius: 16px;
   background: #ECFDF5;
-  border: 2px dashed #10B981;
+  border: 2.5px dashed #10B981;
   color: #047857;
-  font-size: 13.5px;
+  font-size: 16.5px;
   font-weight: 900;
   cursor: pointer;
 }
 
 .q1-bond-legs-svg {
-  width: 140px;
-  height: 42px;
+  width: 176px;
+  height: 48px;
   display: block;
 }
 
 .q1-bond-circles-row {
   display: flex;
   justify-content: center;
-  gap: 24px;
-  width: 140px;
+  gap: 32px;
+  width: 176px;
   margin-top: -3px;
 }
 
 .bond-circle {
-  width: 54px;
-  height: 54px;
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
-  border: 3.5px solid #1E293B;
+  border: 4px solid #1E293B;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 900;
   background: #FFFFFF;
   color: #1E293B;
@@ -2854,8 +2841,8 @@ body {
 /* --- Q2: Chained Number Bonds (多级连环数字分合图) --- */
 .q2-bond-svg-stage {
   position: relative;
-  width: 310px;
-  height: 185px;
+  width: 430px;
+  height: 235px;
   margin: 0 auto;
 }
 
@@ -2867,19 +2854,19 @@ body {
 
 .bond-node {
   position: absolute;
-  width: 54px;
-  height: 54px;
+  width: 68px;
+  height: 68px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 3.5px solid #1E293B;
+  border: 4px solid #1E293B;
   background: #FFFFFF;
   color: #1E293B;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 25px;
+  font-size: 32px;
   font-weight: 900;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.09);
 }
 
 .bond-node.mystery-pulse {
@@ -2898,27 +2885,27 @@ body {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 18px;
 }
 
 .ff-number-cards {
   display: flex;
-  gap: 12px;
+  gap: 16px;
 }
 
 .ff-card {
-  width: 54px;
-  height: 50px;
-  border: 3px solid #1E293B;
-  border-radius: 12px;
+  width: 68px;
+  height: 62px;
+  border: 3.5px solid #1E293B;
+  border-radius: 16px;
   background: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 900;
   color: #1E293B;
-  box-shadow: 0 3px 0 #94A3B8;
+  box-shadow: 0 4px 0 #94A3B8;
 }
 
 .ff-card.whole-card {
@@ -2930,42 +2917,42 @@ body {
 .ff-rule-badge {
   background: #EFF6FF;
   color: #1D4ED8;
-  border: 2px solid #BFDBFE;
-  padding: 5px 12px;
-  border-radius: 14px;
-  font-size: 13.5px;
+  border: 2.5px solid #BFDBFE;
+  padding: 7px 16px;
+  border-radius: 16px;
+  font-size: 16px;
   font-weight: 800;
 }
 
 .ff-equations-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px 16px;
+  gap: 14px 22px;
   width: 100%;
-  max-width: 620px;
+  max-width: 780px;
 }
 
 .ff-eq-box {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
-  border-radius: 16px;
+  padding: 12px 18px;
+  border-radius: 18px;
   background: #F8FAFC;
-  border: 2.5px solid #CBD5E1;
+  border: 3px solid #CBD5E1;
 }
 
 .ff-eq-box.target-eq {
   background: #FFFBEB;
   border-color: #F59E0B;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.16);
+  box-shadow: 0 5px 14px rgba(245, 158, 11, 0.18);
 }
 
 .ff-eq-tag {
-  font-size: 12px;
-  font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 8px;
+  font-size: 14.5px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 10px;
   background: #E2E8F0;
   color: #475569;
 }
@@ -2978,8 +2965,8 @@ body {
 .ff-eq-formula {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 26px;
+  gap: 10px;
+  font-size: 32px;
   font-weight: 900;
   color: #1E293B;
 }
@@ -2988,78 +2975,79 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  height: 40px;
-  padding: 0 8px;
-  border-radius: 10px;
-  border: 3px solid #F59E0B;
-  font-size: 25px;
+  min-width: 54px;
+  height: 48px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 3.5px solid #F59E0B;
+  font-size: 30px;
   font-weight: 900;
 }
 
-/* --- Q4: 20以内三格数塔 (Number Towers) --- */
+/* --- Q4: 三格数塔 (Number Towers：大号三格方塔 + 底部清晰大字算式胶囊) --- */
 .q4-towers-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 18px;
+  gap: 28px;
   width: 100%;
+  padding: 4px 0;
 }
 
 .q4-tower {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   cursor: pointer;
   transition: transform 0.15s ease;
 }
 
 .q4-tower:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
 }
 
 .tower-tag {
-  font-size: 12px;
-  font-weight: 800;
-  padding: 2px 9px;
-  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 900;
+  padding: 4px 14px;
+  border-radius: 12px;
   background: #E2E8F0;
-  color: #475569;
+  color: #334155;
 }
 
 .q4-tower.target-tower .tower-tag {
   background: #FEF08A;
   color: #B45309;
-  border: 1.5px solid #F59E0B;
+  border: 2px solid #F59E0B;
 }
 
 .tower-stack {
   display: flex;
   flex-direction: column;
   align-items: center;
-  border: 3.5px solid #1E293B;
-  border-radius: 12px;
+  border: 4px solid #1E293B;
+  border-radius: 16px;
   overflow: hidden;
   background: #FFFFFF;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
 }
 
 .q4-tower.target-tower .tower-stack {
   border-color: #7C3AED;
-  box-shadow: 0 5px 14px rgba(124, 58, 237, 0.22);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.25);
 }
 
 .tower-cell {
-  width: 68px;
-  height: 44px;
+  width: 116px;
+  height: 58px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 25px;
+  font-size: 34px;
   font-weight: 900;
   color: #1E293B;
-  border-bottom: 2.5px solid #1E293B;
+  border-bottom: 3px solid #1E293B;
 }
 
 .tower-cell.cell-top {
@@ -3071,25 +3059,21 @@ body {
   border-bottom: none;
 }
 
-.tower-op-badge {
-  width: 100%;
-  background: #334155;
-  color: #FFFFFF;
-  font-size: 11px;
-  font-weight: 800;
-  text-align: center;
-  padding: 1px 0;
+.tower-formula-pill {
+  background: #F1F5F9;
+  color: #334155;
+  border: 2px solid #CBD5E1;
+  border-radius: 14px;
+  padding: 5px 14px;
+  font-size: 18px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
-.tower-plus-divider {
-  width: 100%;
-  background: #F1F5F9;
-  color: #64748B;
-  font-size: 12px;
-  font-weight: 900;
-  text-align: center;
-  line-height: 1.1;
-  border-bottom: 2px solid #CBD5E1;
+.tower-formula-pill.target-formula {
+  background: #FFFBEB;
+  color: #B45309;
+  border-color: #F59E0B;
 }
 
 /* --- Q5: Challenge (双步文字算式 & 双边等式天平) --- */
@@ -3097,12 +3081,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: #F8FAFC;
-  border: 2.5px solid #CBD5E1;
-  border-radius: 20px;
-  padding: 12px 20px;
+  border: 3px solid #CBD5E1;
+  border-radius: 24px;
+  padding: 18px 28px;
   width: 100%;
+  max-width: 780px;
 }
 
 .q5-en-line {
@@ -3110,8 +3095,8 @@ body {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 10px;
-  font-size: 28px;
+  gap: 14px;
+  font-size: 36px;
   font-weight: 900;
   color: #1E293B;
 }
@@ -3119,36 +3104,30 @@ body {
 .q5-highlight-delta {
   background: #FEF3C7;
   color: #B45309;
-  padding: 2px 10px;
-  border-radius: 12px;
-  border: 2px solid #FCD34D;
+  padding: 4px 14px;
+  border-radius: 14px;
+  border: 2.5px solid #FCD34D;
 }
 
 .q5-highlight-expr {
   background: #EDE9FE;
   color: #5B21B6;
-  padding: 2px 12px;
-  border-radius: 12px;
-  border: 2px solid #C4B5FD;
+  padding: 4px 16px;
+  border-radius: 14px;
+  border: 2.5px solid #C4B5FD;
 }
 
 .q5-blank-slot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 58px;
-  height: 50px;
-  padding: 0 12px;
-  border-radius: 14px;
-  border: 3.5px solid #F59E0B;
-  font-size: 30px;
+  min-width: 68px;
+  height: 60px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 4px solid #F59E0B;
+  font-size: 36px;
   font-weight: 900;
-}
-
-.q5-zh-line {
-  font-size: 16px;
-  font-weight: 800;
-  color: #475569;
 }
 
 .q5-steps-row {
@@ -3156,19 +3135,19 @@ body {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 14px;
 }
 
 .q5-step-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: #EFF6FF;
-  border: 2px solid #BFDBFE;
+  border: 2.5px solid #BFDBFE;
   color: #1E3A8A;
-  padding: 6px 14px;
-  border-radius: 16px;
-  font-size: 15px;
+  padding: 9px 18px;
+  border-radius: 18px;
+  font-size: 18px;
   font-weight: 800;
 }
 
@@ -3181,9 +3160,9 @@ body {
 .q5-step-pill .step-num {
   background: #2563EB;
   color: white;
-  font-size: 12px;
-  padding: 2px 7px;
-  border-radius: 8px;
+  font-size: 14px;
+  padding: 3px 9px;
+  border-radius: 9px;
 }
 
 .q5-step-pill.step-two .step-num {
@@ -3191,7 +3170,7 @@ body {
 }
 
 .q5-step-arrow {
-  font-size: 20px;
+  font-size: 24px;
   color: #94A3B8;
   font-weight: 900;
 }
@@ -3200,21 +3179,21 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 24px;
   width: 100%;
-  padding: 6px 10px;
+  padding: 10px 14px;
 }
 
 .q5-eq-side {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   background: #F8FAFC;
-  border: 3px solid #CBD5E1;
-  border-radius: 20px;
-  padding: 12px 20px;
-  min-width: 180px;
+  border: 3.5px solid #CBD5E1;
+  border-radius: 24px;
+  padding: 18px 28px;
+  min-width: 240px;
 }
 
 .q5-eq-side.right-side {
@@ -3225,8 +3204,8 @@ body {
 .q5-side-formula {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 34px;
+  gap: 12px;
+  font-size: 42px;
   font-weight: 900;
   color: #1E293B;
 }
@@ -3234,14 +3213,14 @@ body {
 .q5-bridge-tag {
   background: #EDE9FE;
   color: #5B21B6;
-  padding: 3px 12px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 800;
+  padding: 5px 16px;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 900;
 }
 
 .q5-eq-sign {
-  font-size: 38px;
+  font-size: 46px;
   font-weight: 900;
   color: #7C3AED;
 }
@@ -3249,112 +3228,106 @@ body {
 /* K班真题特训：手机竖屏与小屏响应式适配 */
 @media (max-width: 767px) {
   .ktest-stage-wrap {
-    gap: 5px;
+    gap: 6px;
   }
 
   .ktest-filter-bar {
     gap: 4px;
-    padding: 3px 5px;
-    border-radius: 14px;
+    padding: 4px 6px;
+    border-radius: 16px;
   }
 
   .ktest-filter-pill {
-    font-size: 11px;
-    padding: 3px 7px;
-    border-radius: 10px;
-  }
-
-  .ktest-en-tag {
-    font-size: 11px;
-    padding: 1px 6px;
-    margin-right: 4px;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 12px;
   }
 
   .ktest-card {
-    padding: 8px 10px;
-    border-radius: 16px;
-    gap: 6px;
+    padding: 10px 10px;
+    border-radius: 18px;
+    gap: 8px;
   }
 
   .ktest-helper-pill {
-    font-size: 11.5px;
-    padding: 4px 8px;
+    font-size: 12.5px;
+    padding: 5px 10px;
   }
 
   .q1-make-ten-diagram {
-    padding: 4px 10px 76px;
+    padding: 4px 10px 80px;
   }
 
   .q1-equation-row {
-    font-size: 28px;
+    font-size: 30px;
     gap: 10px;
   }
 
   .q1-num-token {
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
     border-radius: 12px;
   }
 
   .q1-result-box {
-    min-width: 52px;
-    height: 44px;
-    font-size: 28px;
+    min-width: 54px;
+    height: 46px;
+    font-size: 30px;
   }
 
   .q1-bond-under-b {
-    width: 108px;
+    width: 112px;
   }
 
   .q1-maketen-bridge {
-    font-size: 11px;
-    padding: 2px 6px;
-    right: calc(100% + 1px);
-    top: 36px;
+    font-size: 11.5px;
+    padding: 3px 7px;
+    right: calc(100% + 2px);
+    top: 38px;
   }
 
   .q1-bond-legs-svg {
-    width: 108px;
+    width: 112px;
     height: 32px;
   }
 
   .q1-bond-circles-row {
-    width: 108px;
+    width: 112px;
     gap: 18px;
   }
 
   .bond-circle {
-    width: 42px;
-    height: 42px;
-    font-size: 20px;
-    border-width: 2.5px;
+    width: 44px;
+    height: 44px;
+    font-size: 21px;
+    border-width: 3px;
   }
 
   .q2-bond-svg-stage {
-    width: 250px;
-    height: 145px;
+    width: 280px;
+    height: 158px;
   }
 
   .bond-node {
-    width: 42px;
-    height: 42px;
-    font-size: 20px;
-    border-width: 2.5px;
+    width: 46px;
+    height: 46px;
+    font-size: 22px;
+    border-width: 3px;
   }
 
   .ff-top-row {
-    gap: 6px;
+    gap: 8px;
   }
 
   .ff-card {
-    width: 40px;
-    height: 38px;
-    font-size: 20px;
+    width: 44px;
+    height: 42px;
+    font-size: 22px;
   }
 
   .ff-rule-badge {
-    font-size: 11px;
-    padding: 3px 8px;
+    font-size: 12px;
+    padding: 4px 10px;
   }
 
   .ff-equations-grid {
@@ -3363,7 +3336,7 @@ body {
   }
 
   .ff-eq-box {
-    padding: 5px 8px;
+    padding: 6px 8px;
     border-radius: 12px;
   }
 
@@ -3372,45 +3345,51 @@ body {
   }
 
   .ff-eq-formula {
-    font-size: 19px;
+    font-size: 20px;
     gap: 5px;
     margin: 0 auto;
   }
 
   .ff-blank {
-    min-width: 34px;
-    height: 32px;
-    font-size: 19px;
+    min-width: 36px;
+    height: 34px;
+    font-size: 20px;
   }
 
   .q4-towers-row {
     gap: 8px;
   }
 
+  .tower-tag {
+    font-size: 11.5px;
+    padding: 2px 7px;
+  }
+
   .tower-cell {
-    width: 52px;
-    height: 34px;
-    font-size: 19px;
-  }
-
-  .q5-en-line {
-    font-size: 20px;
-    gap: 6px;
-  }
-
-  .q5-blank-slot {
-    min-width: 44px;
-    height: 38px;
+    width: clamp(64px, 19vw, 82px);
+    height: 40px;
     font-size: 22px;
   }
 
-  .q5-zh-line {
-    font-size: 13px;
+  .tower-formula-pill {
+    font-size: 12.5px;
+    padding: 3px 7px;
+  }
+
+  .q5-en-line {
+    font-size: 22px;
+    gap: 8px;
+  }
+
+  .q5-blank-slot {
+    min-width: 46px;
+    height: 40px;
+    font-size: 24px;
   }
 
   .q5-step-pill {
-    font-size: 12px;
-    padding: 4px 9px;
+    font-size: 13px;
+    padding: 5px 10px;
   }
 
   .q5-balance-eq-box {
@@ -3426,16 +3405,16 @@ body {
   }
 
   .q5-side-formula {
-    font-size: 22px;
+    font-size: 24px;
     gap: 6px;
   }
 
   .q5-bridge-tag {
-    font-size: 11.5px;
-    padding: 2px 7px;
+    font-size: 12px;
+    padding: 3px 8px;
   }
 
   .q5-eq-sign {
-    font-size: 26px;
+    font-size: 28px;
   }
 }

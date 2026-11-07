@@ -2240,11 +2240,11 @@ class MathGameApp {
             <!-- 倒V型数键分支严格居中锚定在第二个加数 b 正下方 -->
             <div class="q1-bond-under-b">
               <div class="q1-maketen-bridge" title="点击听凑十过程">
-                <span class="bridge-badge">✨ ${a}+${needForTen}=10</span>
+                <span class="bridge-badge">✨ ${a} + ${needForTen} = 10</span>
               </div>
-              <svg class="q1-bond-legs-svg" viewBox="0 0 140 42" aria-hidden="true">
-                <line x1="70" y1="2" x2="31" y2="39" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
-                <line x1="70" y1="2" x2="109" y2="39" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+              <svg class="q1-bond-legs-svg" viewBox="0 0 176 48" aria-hidden="true">
+                <line x1="88" y1="2" x2="39" y2="45" stroke="#334155" stroke-width="4" stroke-linecap="round"/>
+                <line x1="88" y1="2" x2="137" y2="45" stroke="#334155" stroke-width="4" stroke-linecap="round"/>
               </svg>
               <div class="q1-bond-circles-row">
                 <div class="bond-circle shaded" title="${a} + ${needForTen} = 10">${needForTen}</div>
@@ -2590,15 +2590,25 @@ class MathGameApp {
         ? `<div class="tower-cell cell-bot ktest-target-slot mystery-pulse">?</div>`
         : `<div class="tower-cell cell-bot">${b}</div>`;
 
+      let formulaHtml = `${m} + ${b} = ${t}`;
+      if (isTarget) {
+        if (missingSlot === 'top') {
+          formulaHtml = `${m} + ${b} = <span class="ktest-step-reveal">?</span>`;
+        } else if (missingSlot === 'mid') {
+          formulaHtml = `<span class="ktest-step-reveal">?</span> + ${b} = ${t}`;
+        } else {
+          formulaHtml = `${m} + <span class="ktest-step-reveal">?</span> = ${t}`;
+        }
+      }
+
       towerEl.innerHTML = `
         <div class="tower-tag">${isTarget ? '🎯 填一填' : `示范 ${idx + 1}`}</div>
         <div class="tower-stack">
           ${topCell}
-          <div class="tower-op-badge">= ${isTarget && missingSlot !== 'top' ? `${t}` : `${m}+${b}`}</div>
           ${midCell}
-          <div class="tower-plus-divider">+</div>
           ${botCell}
         </div>
+        <div class="tower-formula-pill ${isTarget ? 'target-formula' : ''}">${formulaHtml}</div>
       `;
 
       towerEl.addEventListener('click', () => {
