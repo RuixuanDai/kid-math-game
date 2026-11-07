@@ -271,11 +271,11 @@ body {
   margin-left: 3px;
 }
 
-/* 8大关卡模式导航栏 (单排8格，清晰大字) */
+/* 9大关卡模式导航栏 (单排9格，清晰大字) */
 .mode-navigation {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 7px;
   margin-bottom: 8px;
   flex-shrink: 0;
 }
@@ -326,6 +326,25 @@ body {
 
 .mode-nav-btn.active .mode-title {
   color: #FF5E7E;
+}
+
+.mode-nav-btn.ktest-nav-btn {
+  border-color: #C4B5FD;
+  background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
+}
+
+.mode-nav-btn.ktest-nav-btn .mode-title {
+  color: #6D28D9;
+}
+
+.mode-nav-btn.ktest-nav-btn.active {
+  border-color: #8B5CF6;
+  background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.mode-nav-btn.ktest-nav-btn.active .mode-title {
+  color: #5B21B6;
 }
 
 .mode-nav-btn.sprint-nav-btn {
@@ -2047,26 +2066,28 @@ body {
     display: none;
   }
 
-  /* 2. 8大关卡导航：2行×4列紧凑大触控格 */
+  /* 2. 9大关卡导航：3行×3列整齐紧凑大触控格 */
   .mode-navigation {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 5px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
     margin-bottom: 5px;
   }
 
   .mode-nav-btn {
-    padding: 4px 2px;
-    border-radius: 12px;
+    padding: 4px 4px;
+    border-radius: 11px;
     border-width: 2px;
-    gap: 1px;
+    flex-direction: row;
+    justify-content: center;
+    gap: 4px;
   }
 
   .mode-nav-btn .mode-icon {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .mode-nav-btn .mode-title {
-    font-size: 11.5px;
+    font-size: 12px;
   }
 
   /* 3. 60秒冲刺 HUD 条 */
@@ -2515,7 +2536,7 @@ body {
   }
 
   .mode-navigation {
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(9, 1fr);
     gap: 4px;
     margin-bottom: 4px;
   }
@@ -2604,5 +2625,797 @@ body {
   .feedback-zone {
     height: 20px;
     min-height: 20px;
+  }
+}
+
+/* ==========================================================================
+   关卡 8：K班数学测试真题特训 (K CLASS MATH TEST 1:1 还原与互动升级)
+   ========================================================================== */
+.ktest-stage-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 780px;
+  gap: 8px;
+}
+
+.ktest-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  background: #F5F3FF;
+  border: 2px solid #DDD6FE;
+  border-radius: 22px;
+  padding: 4px 8px;
+}
+
+.ktest-filter-pill {
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: #5B21B6;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 4px 11px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ktest-filter-pill:hover {
+  background: #EDE9FE;
+}
+
+.ktest-filter-pill.active {
+  background: #7C3AED;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.3);
+}
+
+.ktest-en-tag {
+  display: inline-block;
+  background: #EDE9FE;
+  color: #5B21B6;
+  font-size: 13.5px;
+  font-weight: 900;
+  padding: 2px 10px;
+  border-radius: 10px;
+  border: 1.5px solid #C4B5FD;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.ktest-card {
+  width: 100%;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAF8FF 100%);
+  border: 3px solid #DDD6FE;
+  border-radius: 24px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.08);
+}
+
+.ktest-helper-pill {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 2px dashed #F59E0B;
+  border-radius: 16px;
+  padding: 5px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+}
+
+.mystery-pulse {
+  background: #FEF08A !important;
+  color: #D97706 !important;
+  border-color: #F59E0B !important;
+  animation: pulseMystery 1.4s infinite ease-in-out;
+}
+
+@keyframes pulseMystery {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+}
+
+.ktest-target-slot.filled-correct,
+.ktest-step-reveal.filled-correct {
+  background: #DCFCE7 !important;
+  color: #15803D !important;
+  border-color: #22C55E !important;
+  animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* --- Q1: Make Ten Number Bond (凑十数键分支图) --- */
+.q1-make-ten-diagram {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 12px;
+}
+
+.q1-equation-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  font-size: 40px;
+  font-weight: 900;
+  color: #1E293B;
+}
+
+.q1-num-token {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F8FAFC;
+  border: 3px solid #CBD5E1;
+}
+
+.q1-num-b {
+  background: #EDE9FE;
+  border-color: #8B5CF6;
+  color: #5B21B6;
+}
+
+.q1-result-box {
+  min-width: 68px;
+  height: 58px;
+  padding: 0 12px;
+  border-radius: 16px;
+  border: 3.5px solid #1E293B;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38px;
+  font-weight: 900;
+}
+
+.q1-bond-area {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 14px;
+  margin-top: -2px;
+}
+
+.q1-maketen-bridge {
+  margin-top: 24px;
+  padding: 5px 11px;
+  border-radius: 14px;
+  background: #ECFDF5;
+  border: 2px dashed #10B981;
+  color: #047857;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.q1-bond-under-b {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.q1-bond-legs-svg {
+  width: 130px;
+  height: 38px;
+}
+
+.q1-bond-circles-row {
+  display: flex;
+  gap: 28px;
+  margin-top: -3px;
+}
+
+.bond-circle {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 3.5px solid #1E293B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 900;
+  background: #FFFFFF;
+  color: #1E293B;
+}
+
+.bond-circle.shaded,
+.bond-node.shaded {
+  background: #D1D5DB;
+  color: #111827;
+}
+
+/* --- Q2: Chained Number Bonds (多级连环数字分合图) --- */
+.q2-bond-svg-stage {
+  position: relative;
+  width: 310px;
+  height: 185px;
+  margin: 0 auto;
+}
+
+.q2-bond-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.bond-node {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 3.5px solid #1E293B;
+  background: #FFFFFF;
+  color: #1E293B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25px;
+  font-weight: 900;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.bond-node.mystery-pulse {
+  transform: translate(-50%, -50%);
+  animation: pulseBondNode 1.4s infinite ease-in-out;
+}
+
+@keyframes pulseBondNode {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.08); }
+}
+
+/* --- Q3: Fact Family (一图四式：2道加法 + 2道减法) --- */
+.ff-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.ff-number-cards {
+  display: flex;
+  gap: 12px;
+}
+
+.ff-card {
+  width: 54px;
+  height: 50px;
+  border: 3px solid #1E293B;
+  border-radius: 12px;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 900;
+  color: #1E293B;
+  box-shadow: 0 3px 0 #94A3B8;
+}
+
+.ff-card.whole-card {
+  background: #FEF3C7;
+  border-color: #D97706;
+  color: #B45309;
+}
+
+.ff-rule-badge {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 2px solid #BFDBFE;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.ff-equations-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 16px;
+  width: 100%;
+  max-width: 620px;
+}
+
+.ff-eq-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-radius: 16px;
+  background: #F8FAFC;
+  border: 2.5px solid #CBD5E1;
+}
+
+.ff-eq-box.target-eq {
+  background: #FFFBEB;
+  border-color: #F59E0B;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.16);
+}
+
+.ff-eq-tag {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: #E2E8F0;
+  color: #475569;
+}
+
+.ff-eq-box.target-eq .ff-eq-tag {
+  background: #FDE68A;
+  color: #92400E;
+}
+
+.ff-eq-formula {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 26px;
+  font-weight: 900;
+  color: #1E293B;
+}
+
+.ff-blank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 40px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 3px solid #F59E0B;
+  font-size: 25px;
+  font-weight: 900;
+}
+
+/* --- Q4: 20以内三格数塔 (Number Towers) --- */
+.q4-towers-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+}
+
+.q4-tower {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.q4-tower:hover {
+  transform: translateY(-3px);
+}
+
+.tower-tag {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: #E2E8F0;
+  color: #475569;
+}
+
+.q4-tower.target-tower .tower-tag {
+  background: #FEF08A;
+  color: #B45309;
+  border: 1.5px solid #F59E0B;
+}
+
+.tower-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 3.5px solid #1E293B;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #FFFFFF;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07);
+}
+
+.q4-tower.target-tower .tower-stack {
+  border-color: #7C3AED;
+  box-shadow: 0 5px 14px rgba(124, 58, 237, 0.22);
+}
+
+.tower-cell {
+  width: 68px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25px;
+  font-weight: 900;
+  color: #1E293B;
+  border-bottom: 2.5px solid #1E293B;
+}
+
+.tower-cell.cell-top {
+  background: #EDE9FE;
+  color: #4C1D95;
+}
+
+.tower-cell.cell-bot {
+  border-bottom: none;
+}
+
+.tower-op-badge {
+  width: 100%;
+  background: #334155;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  padding: 1px 0;
+}
+
+.tower-plus-divider {
+  width: 100%;
+  background: #F1F5F9;
+  color: #64748B;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  line-height: 1.1;
+  border-bottom: 2px solid #CBD5E1;
+}
+
+/* --- Q5: Challenge (双步文字算式 & 双边等式天平) --- */
+.q5-verbal-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: #F8FAFC;
+  border: 2.5px solid #CBD5E1;
+  border-radius: 20px;
+  padding: 12px 20px;
+  width: 100%;
+}
+
+.q5-en-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 28px;
+  font-weight: 900;
+  color: #1E293B;
+}
+
+.q5-highlight-delta {
+  background: #FEF3C7;
+  color: #B45309;
+  padding: 2px 10px;
+  border-radius: 12px;
+  border: 2px solid #FCD34D;
+}
+
+.q5-highlight-expr {
+  background: #EDE9FE;
+  color: #5B21B6;
+  padding: 2px 12px;
+  border-radius: 12px;
+  border: 2px solid #C4B5FD;
+}
+
+.q5-blank-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  height: 50px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 3.5px solid #F59E0B;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.q5-zh-line {
+  font-size: 16px;
+  font-weight: 800;
+  color: #475569;
+}
+
+.q5-steps-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.q5-step-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #EFF6FF;
+  border: 2px solid #BFDBFE;
+  color: #1E3A8A;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.q5-step-pill.step-two {
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+  color: #065F46;
+}
+
+.q5-step-pill .step-num {
+  background: #2563EB;
+  color: white;
+  font-size: 12px;
+  padding: 2px 7px;
+  border-radius: 8px;
+}
+
+.q5-step-pill.step-two .step-num {
+  background: #059669;
+}
+
+.q5-step-arrow {
+  font-size: 20px;
+  color: #94A3B8;
+  font-weight: 900;
+}
+
+.q5-balance-eq-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  padding: 6px 10px;
+}
+
+.q5-eq-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: #F8FAFC;
+  border: 3px solid #CBD5E1;
+  border-radius: 20px;
+  padding: 12px 20px;
+  min-width: 180px;
+}
+
+.q5-eq-side.right-side {
+  background: #FFFBEB;
+  border-color: #FCD34D;
+}
+
+.q5-side-formula {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 34px;
+  font-weight: 900;
+  color: #1E293B;
+}
+
+.q5-bridge-tag {
+  background: #EDE9FE;
+  color: #5B21B6;
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.q5-eq-sign {
+  font-size: 38px;
+  font-weight: 900;
+  color: #7C3AED;
+}
+
+/* K班真题特训：手机竖屏与小屏响应式适配 */
+@media (max-width: 767px) {
+  .ktest-stage-wrap {
+    gap: 5px;
+  }
+
+  .ktest-filter-bar {
+    gap: 4px;
+    padding: 3px 5px;
+    border-radius: 14px;
+  }
+
+  .ktest-filter-pill {
+    font-size: 11px;
+    padding: 3px 7px;
+    border-radius: 10px;
+  }
+
+  .ktest-en-tag {
+    font-size: 11px;
+    padding: 1px 6px;
+    margin-right: 4px;
+  }
+
+  .ktest-card {
+    padding: 8px 10px;
+    border-radius: 16px;
+    gap: 6px;
+  }
+
+  .ktest-helper-pill {
+    font-size: 11.5px;
+    padding: 4px 8px;
+  }
+
+  .q1-equation-row {
+    font-size: 28px;
+    gap: 8px;
+  }
+
+  .q1-num-token {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  .q1-result-box {
+    min-width: 52px;
+    height: 44px;
+    font-size: 28px;
+  }
+
+  .q1-maketen-bridge {
+    font-size: 11.5px;
+    padding: 3px 8px;
+    margin-top: 14px;
+  }
+
+  .q1-bond-legs-svg {
+    width: 96px;
+    height: 28px;
+  }
+
+  .q1-bond-circles-row {
+    gap: 16px;
+  }
+
+  .bond-circle {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+    border-width: 2.5px;
+  }
+
+  .q2-bond-svg-stage {
+    width: 250px;
+    height: 145px;
+  }
+
+  .bond-node {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+    border-width: 2.5px;
+  }
+
+  .ff-top-row {
+    gap: 6px;
+  }
+
+  .ff-card {
+    width: 40px;
+    height: 38px;
+    font-size: 20px;
+  }
+
+  .ff-rule-badge {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .ff-equations-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 8px;
+  }
+
+  .ff-eq-box {
+    padding: 5px 8px;
+    border-radius: 12px;
+  }
+
+  .ff-eq-tag {
+    display: none;
+  }
+
+  .ff-eq-formula {
+    font-size: 19px;
+    gap: 5px;
+    margin: 0 auto;
+  }
+
+  .ff-blank {
+    min-width: 34px;
+    height: 32px;
+    font-size: 19px;
+  }
+
+  .q4-towers-row {
+    gap: 8px;
+  }
+
+  .tower-cell {
+    width: 52px;
+    height: 34px;
+    font-size: 19px;
+  }
+
+  .q5-en-line {
+    font-size: 20px;
+    gap: 6px;
+  }
+
+  .q5-blank-slot {
+    min-width: 44px;
+    height: 38px;
+    font-size: 22px;
+  }
+
+  .q5-zh-line {
+    font-size: 13px;
+  }
+
+  .q5-step-pill {
+    font-size: 12px;
+    padding: 4px 9px;
+  }
+
+  .q5-balance-eq-box {
+    gap: 8px;
+    padding: 2px;
+  }
+
+  .q5-eq-side {
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 8px 8px;
+    border-radius: 14px;
+  }
+
+  .q5-side-formula {
+    font-size: 22px;
+    gap: 6px;
+  }
+
+  .q5-bridge-tag {
+    font-size: 11.5px;
+    padding: 2px 7px;
+  }
+
+  .q5-eq-sign {
+    font-size: 26px;
   }
 }

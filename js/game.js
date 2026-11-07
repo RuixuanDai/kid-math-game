@@ -1,11 +1,12 @@
 // 6岁儿童数学小王国 - 高级全能进阶版
-// 8大关卡：森林数数、天平比大小、趣味加减、规律火车、十格阵凑十、奇妙时钟、空间数积木、60秒冲刺
+// 9大关卡：森林数数、天平比大小、趣味加减、规律火车、十格阵凑十、奇妙时钟、空间数积木、真题特训(K班测试卷)、60秒冲刺
 // 3大难度：10以内基础、20以内进退位、100以内高阶挑战
 
 class MathGameApp {
   constructor() {
-    this.currentMode = 'counting'; // 'counting' | 'comparison' | 'arithmetic' | 'patterns' | 'tenframes' | 'clocks' | 'blocks' | 'speedrun'
+    this.currentMode = 'counting'; // 'counting' | 'comparison' | 'arithmetic' | 'patterns' | 'tenframes' | 'clocks' | 'blocks' | 'ktest' | 'speedrun'
     this.difficulty = '20';
+    this.ktestSubType = 'all'; // 'all' | 'q1' | 'q2' | 'q3' | 'q4' | 'q5'
     this.stars = parseInt(localStorage.getItem('kid_math_stars') || '8', 10);
     this.unlockedStickers = JSON.parse(localStorage.getItem('kid_math_stickers') || '["bunny", "sun", "icecream"]');
     this.bestSprintScore = parseInt(localStorage.getItem('kid_math_best_sprint') || '0', 10);
@@ -122,6 +123,9 @@ class MathGameApp {
         this.difficultySelectorEl.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.difficulty = btn.dataset.diff;
+        if (this.currentMode === 'ktest') {
+          this.ktestSubType = 'all';
+        }
         window.soundManager.playPop();
         this.setMascot(`难度切换为：${btn.textContent}！继续加油！`);
         this.generateQuestion();
@@ -355,6 +359,7 @@ class MathGameApp {
       tenframes: '十格阵凑十 🧪',
       clocks: '奇妙时钟岛 ⏰',
       blocks: '空间数积木 🧩',
+      ktest: 'K班真题特训 🎓',
       speedrun: '60秒极速冲刺 ⚡'
     };
 
@@ -403,6 +408,11 @@ class MathGameApp {
         { diff: '10', label: '初级 (4~6块)', tip: '2层基础立体积木堆' },
         { diff: '20', label: '进阶 (7~9块)', tip: '含隐藏遮挡积木，空间推理' },
         { diff: '100', label: '挑战 (10~14块)', tip: '3层立体建筑与柱体标数法' }
+      ],
+      ktest: [
+        { diff: '10', label: '数键与四式', tip: 'Q2连环数字分合图 & Q3一图四式(2加2减)' },
+        { diff: '20', label: '凑十与数塔', tip: 'Q1凑十数键分支图 & Q4二十以内三格数塔' },
+        { diff: '100', label: '压轴挑战卷', tip: 'Q5双步多/少推理、双边等式平衡与全卷综合' }
       ]
     };
     return diffMap[mode] || null;
@@ -491,6 +501,9 @@ class MathGameApp {
         break;
       case 'blocks':
         this.generateBlocksQuestion();
+        break;
+      case 'ktest':
+        this.generateKTestQuestion();
         break;
       case 'speedrun':
         this.generateSpeedrunQuestion();
@@ -2115,7 +2128,680 @@ class MathGameApp {
     this.renderOptions(options, totalBlocks);
   }
 
-  // ================= 8. 60秒极速挑战模式 (计时闯关、连击加分与最高分纪录) =================
+  // ================= 8. K班数学测试真题特训 (1:1还原试卷5大核心题型) =================
+  generateKTestQuestion() {
+    const stage = document.createElement('div');
+    stage.className = 'ktest-stage-wrap';
+
+    // 非冲刺模式下顶部渲染 6 颗题型快捷切换胶囊，方便家长与孩子指定练习试卷某一道大题
+    if (!this.speedrunActive) {
+      const filterBar = document.createElement('div');
+      filterBar.className = 'ktest-filter-bar';
+      const subTypes = [
+        { id: 'all', label: '🎲 综合真题' },
+        { id: 'q1', label: '① 凑十数键' },
+        { id: 'q2', label: '② 连环分合' },
+        { id: 'q3', label: '③ 一图四式' },
+        { id: 'q4', label: '④ 三格数塔' },
+        { id: 'q5', label: '⑤ 压轴挑战' }
+      ];
+      subTypes.forEach(item => {
+        const pill = document.createElement('button');
+        pill.className = `ktest-filter-pill ${this.ktestSubType === item.id ? 'active' : ''}`;
+        pill.textContent = item.label;
+        pill.addEventListener('click', () => {
+          window.soundManager.playPop();
+          this.ktestSubType = item.id;
+          this.generateQuestion();
+        });
+        filterBar.appendChild(pill);
+      });
+      stage.appendChild(filterBar);
+    }
+
+    // 根据选定专项或当前难度档位抽取题型
+    let chosenType = this.ktestSubType;
+    if (chosenType === 'all' || this.speedrunActive) {
+      if (this.difficulty === '10') {
+        chosenType = Math.random() < 0.5 ? 'q2' : 'q3';
+      } else if (this.difficulty === '20') {
+        chosenType = Math.random() < 0.5 ? 'q1' : 'q4';
+      } else {
+        // 100 压轴挑战卷：Q5 占 60%，其余 Q1~Q4 综合抽考 40%
+        const pool = ['q5', 'q5', 'q5', 'q1', 'q2', 'q3', 'q4'];
+        chosenType = pool[Math.floor(Math.random() * pool.length)];
+      }
+    }
+
+    this.questionZoneEl.appendChild(stage);
+
+    switch (chosenType) {
+      case 'q1':
+        this.buildKTestQ1MakeTenBond(stage);
+        break;
+      case 'q2':
+        this.buildKTestQ2ChainedBonds(stage);
+        break;
+      case 'q3':
+        this.buildKTestQ3FactFamily(stage);
+        break;
+      case 'q4':
+        this.buildKTestQ4NumberTowers(stage);
+        break;
+      case 'q5':
+      default:
+        this.buildKTestQ5Challenge(stage);
+        break;
+    }
+  }
+
+  // 真题 Q1: Make ten. Complete the number bond. (凑十数键分支图，如 8 + 5 = 13，5 拆成 2 和 3)
+  buildKTestQ1MakeTenBond(stage) {
+    const aPool = [9, 8, 7, 6];
+    const a = aPool[Math.floor(Math.random() * aPool.length)];
+    const needForTen = 10 - a;
+    const minB = needForTen + 1;
+    const maxB = 9;
+    const b = Math.floor(Math.random() * (maxB - minB + 1)) + minB;
+    const rem = b - needForTen;
+    const total = a + b;
+
+    // 交替考察：① 填数键拆分圆圈 (把 b 拆成 needForTen 和 ?) 或 ② 填最终凑十总和 (a + b = [ ? ])
+    const askBondCircle = Math.random() < 0.45;
+    const correctAnswer = askBondCircle ? rem : total;
+
+    const titleEn = '1. Make ten. Complete the number bond.';
+    const titleZh = askBondCircle
+      ? `凑十数键：${a} 需要 ${needForTen} 凑成 10，那 ${b} 可以分成 ${needForTen} 和几？`
+      : `凑十数键：先把 ${a} 和 ${needForTen} 凑成 10，再算 ${a} + ${b} 等于几？`;
+
+    const audioPrompt = askBondCircle
+      ? `第一题，凑十数键图。${a} 加 ${needForTen} 凑成 10，把 ${b} 分成 ${needForTen} 和几呢？`
+      : `第一题，凑十法算一算。把 ${b} 分成 ${needForTen} 和 ${rem}，${a} 加 ${needForTen} 等于 10，10 再加 ${rem} 等于几呢？`;
+
+    const praiseText = `太棒啦！把 ${b} 分成 ${needForTen} 和 ${rem}，${a} 加 ${needForTen} 凑成 10，10 加 ${rem} 就等于 ${total}！`;
+
+    this.currentQuestion = {
+      answer: correctAnswer,
+      audioPrompt,
+      praiseText,
+      type: 'ktest',
+      subType: 'q1'
+    };
+
+    this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+
+    const card = document.createElement('div');
+    card.className = 'ktest-card ktest-q1-card';
+    card.innerHTML = `
+      <div class="q1-make-ten-diagram">
+        <div class="q1-equation-row">
+          <div class="q1-num-token q1-num-a" title="点击听凑十秘诀">${a}</div>
+          <div class="q1-op-token">+</div>
+          <div class="q1-num-token q1-num-b">${b}</div>
+          <div class="q1-op-token">=</div>
+          ${askBondCircle
+            ? `<div class="q1-result-box solved">${total}</div>`
+            : `<div class="q1-result-box ktest-target-slot mystery-pulse">?</div>`
+          }
+        </div>
+
+        <div class="q1-bond-area">
+          <!-- 凑十虚线桥：连接第一个加数 a 与左侧凑十圆圈 needForTen -->
+          <div class="q1-maketen-bridge" title="点击听凑十过程">
+            <span class="bridge-badge">✨ ${a} + ${needForTen} = 10</span>
+          </div>
+
+          <!-- 倒V型数键分支下挂在第二个加数 b 正下方 -->
+          <div class="q1-bond-under-b">
+            <svg class="q1-bond-legs-svg" viewBox="0 0 140 44" aria-hidden="true">
+              <line x1="70" y1="2" x2="30" y2="40" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+              <line x1="70" y1="2" x2="110" y2="40" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+            </svg>
+            <div class="q1-bond-circles-row">
+              <div class="bond-circle shaded" title="${a} + ${needForTen} = 10">${needForTen}</div>
+              ${askBondCircle
+                ? `<div class="bond-circle ktest-target-slot mystery-pulse">?</div>`
+                : `<div class="bond-circle unshaded" title="10 + ${rem} = ${total}">${rem}</div>`
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ktest-helper-pill" id="q1-helper-pill">
+        💡 点击看思路：<strong>${a} + ${needForTen} = 10</strong>，${askBondCircle ? `<strong>${b} - ${needForTen} = ?</strong>` : `<strong>10 + ${rem} = ?</strong>`}
+      </div>
+    `;
+
+    card.querySelector('#q1-helper-pill').addEventListener('click', () => {
+      window.soundManager.playPop();
+      window.soundManager.speak(`${a} 加 ${needForTen} 凑成 10，${b} 分成 ${needForTen} 和 ${rem}，10 加 ${rem} 等于 ${total}`);
+    });
+
+    stage.appendChild(card);
+
+    const minOpt = askBondCircle ? 1 : 11;
+    const maxOpt = askBondCircle ? 9 : 19;
+    const options = this.generateChoices(correctAnswer, minOpt, maxOpt, 4);
+    this.renderOptions(options, correctAnswer);
+  }
+
+  // 真题 Q2: Complete the number bonds. (多级连环数字分合图：左款自上而下连环拆、右款自左向右连环合)
+  buildKTestQ2ChainedBonds(stage) {
+    const isLeftStyle = Math.random() < 0.5;
+    const titleEn = '2. Complete the number bonds.';
+
+    const card = document.createElement('div');
+    card.className = 'ktest-card ktest-q2-card';
+
+    if (isLeftStyle) {
+      // 试卷左图：顶圆 Whole (深灰已知) -> 左中 Mid & 右中 P1 (深灰已知)；左中 Mid -> 左下 P2 (深灰已知) & 右下 P3
+      const whole = Math.floor(Math.random() * 6) + 7; // 7 ~ 12
+      const p1 = Math.floor(Math.random() * 3) + 2;    // 2 ~ 4
+      const mid = whole - p1;                          // 4 ~ 9
+      const p2 = Math.floor(Math.random() * (mid - 2)) + 1;
+      const p3 = mid - p2;
+
+      const askMid = Math.random() < 0.5;
+      const correctAnswer = askMid ? mid : p3;
+
+      const titleZh = askMid
+        ? `连环数键：顶上的 ${whole} 分成 ？ 和 ${p1}（而且 ？ 还能分成 ${p2} 和 ${p3}）`
+        : `连环数键：${whole} 分成 ${mid} 和 ${p1}，那 ${mid} 再分成 ${p2} 和几呢？`;
+
+      const audioPrompt = askMid
+        ? `第二题，连环数键分合图。顶上的 ${whole} 分成几和 ${p1} 呢？下面还能看到它分成了 ${p2} 和 ${p3} 哦！`
+        : `第二题，连环数键分合图。${whole} 分成 ${mid} 和 ${p1}，中间的 ${mid} 又分成 ${p2} 和几呢？`;
+
+      const praiseText = `完全正确！${whole} 分成 ${mid} 和 ${p1}，${mid} 再分成 ${p2} 和 ${p3}！`;
+
+      this.currentQuestion = {
+        answer: correctAnswer,
+        audioPrompt,
+        praiseText,
+        type: 'ktest',
+        subType: 'q2'
+      };
+
+      this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+
+      card.innerHTML = `
+        <div class="q2-bond-svg-stage">
+          <svg class="q2-bond-svg" viewBox="0 0 320 200" aria-hidden="true">
+            <!-- 顶层 Whole (190, 34) 到 左中 Mid (115, 102) 与 右中 P1 (248, 96) -->
+            <line x1="190" y1="34" x2="115" y2="102" stroke="#1E293B" stroke-width="3.5"/>
+            <line x1="190" y1="34" x2="248" y2="96" stroke="#1E293B" stroke-width="3.5"/>
+            <!-- 左中 Mid (115, 102) 到 左下 P2 (62, 166) 与 右下 P3 (162, 166) -->
+            <line x1="115" y1="102" x2="62" y2="166" stroke="#1E293B" stroke-width="3.5"/>
+            <line x1="115" y1="102" x2="162" y2="166" stroke="#1E293B" stroke-width="3.5"/>
+          </svg>
+
+          <!-- 5个圆圈节点 -->
+          <div class="bond-node shaded" style="left: 59.4%; top: 17%;" title="总数 ${whole}">${whole}</div>
+          ${askMid
+            ? `<div class="bond-node ktest-target-slot mystery-pulse" style="left: 35.9%; top: 51%;">?</div>`
+            : `<div class="bond-node unshaded" style="left: 35.9%; top: 51%;" title="${whole} - ${p1} = ${mid}">${mid}</div>`
+          }
+          <div class="bond-node shaded" style="left: 77.5%; top: 48%;">${p1}</div>
+          <div class="bond-node shaded" style="left: 19.4%; top: 83%;">${p2}</div>
+          ${askMid
+            ? `<div class="bond-node unshaded" style="left: 50.6%; top: 83%;">${p3}</div>`
+            : `<div class="bond-node ktest-target-slot mystery-pulse" style="left: 50.6%; top: 83%;">?</div>`
+          }
+        </div>
+        <div class="ktest-helper-pill">
+          💡 提示：${askMid ? `${whole} - ${p1} = ？ （或者 ${p2} + ${p3} = ？）` : `先看上层 ${whole} - ${p1} = ${mid}，再算下层 ${mid} - ${p2} = ？`}
+        </div>
+      `;
+
+      stage.appendChild(card);
+      const options = this.generateChoices(correctAnswer, 1, whole, 4);
+      this.renderOptions(options, correctAnswer);
+
+    } else {
+      // 试卷右图：左上 A (深灰) + 左下 B (深灰) -> 中间 Mid；中间 Mid + 下方 C -> 右侧总数 Whole (深灰)
+      const a = Math.floor(Math.random() * 4) + 2; // 2 ~ 5
+      const b = Math.floor(Math.random() * 4) + 2; // 2 ~ 5
+      const mid = a + b;                           // 4 ~ 10
+      const c = Math.floor(Math.random() * 4) + 1; // 1 ~ 4
+      const whole = mid + c;                       // 5 ~ 14
+
+      const askMid = Math.random() < 0.5;
+      const correctAnswer = askMid ? mid : c;
+
+      const titleZh = askMid
+        ? `连环数键：左边的 ${a} 和 ${b} 合起来是几？`
+        : `连环数键：${a} 和 ${b} 合起来是 ${mid}，那 ${mid} 再和几合起来是 ${whole}？`;
+
+      const audioPrompt = askMid
+        ? `第二题，连环数键分合图。左边的 ${a} 和 ${b} 合起来等于中间的几呢？`
+        : `第二题，连环数键分合图。${a} 加 ${b} 等于 ${mid}，${mid} 再加下面圆圈里的几等于最右边的 ${whole} 呢？`;
+
+      const praiseText = `太聪明啦！${a} 和 ${b} 合起来是 ${mid}，${mid} 和 ${c} 合起来就是 ${whole}！`;
+
+      this.currentQuestion = {
+        answer: correctAnswer,
+        audioPrompt,
+        praiseText,
+        type: 'ktest',
+        subType: 'q2'
+      };
+
+      this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+
+      card.innerHTML = `
+        <div class="q2-bond-svg-stage">
+          <svg class="q2-bond-svg" viewBox="0 0 320 200" aria-hidden="true">
+            <!-- 左上 A (58, 42) 与 左下 B (58, 128) 汇聚到 中间 Mid (148, 86) -->
+            <line x1="58" y1="42" x2="148" y2="86" stroke="#1E293B" stroke-width="3.5"/>
+            <line x1="58" y1="128" x2="148" y2="86" stroke="#1E293B" stroke-width="3.5"/>
+            <!-- 中间 Mid (148, 86) 与 下方 C (164, 166) 汇聚到 右侧 Whole (258, 122) -->
+            <line x1="148" y1="86" x2="258" y2="122" stroke="#1E293B" stroke-width="3.5"/>
+            <line x1="164" y1="166" x2="258" y2="122" stroke="#1E293B" stroke-width="3.5"/>
+          </svg>
+
+          <!-- 5个圆圈节点 -->
+          <div class="bond-node shaded" style="left: 18.1%; top: 21%;">${a}</div>
+          <div class="bond-node shaded" style="left: 18.1%; top: 64%;">${b}</div>
+          ${askMid
+            ? `<div class="bond-node ktest-target-slot mystery-pulse" style="left: 46.2%; top: 43%;">?</div>`
+            : `<div class="bond-node unshaded" style="left: 46.2%; top: 43%;" title="${a} + ${b} = ${mid}">${mid}</div>`
+          }
+          ${askMid
+            ? `<div class="bond-node unshaded" style="left: 51.2%; top: 83%;">${c}</div>`
+            : `<div class="bond-node ktest-target-slot mystery-pulse" style="left: 51.2%; top: 83%;">?</div>`
+          }
+          <div class="bond-node shaded" style="left: 80.6%; top: 61%;" title="总数 ${whole}">${whole}</div>
+        </div>
+        <div class="ktest-helper-pill">
+          💡 提示：${askMid ? `左边两个圆圈合起来：${a} + ${b} = ？` : `左边 ${a} + ${b} = ${mid}，右边总数是 ${whole}，所以 ${whole} - ${mid} = ？`}
+        </div>
+      `;
+
+      stage.appendChild(card);
+      const options = this.generateChoices(correctAnswer, 1, whole, 4);
+      this.renderOptions(options, correctAnswer);
+    }
+  }
+
+  // 真题 Q3: Write 2 addition and 2 subtraction equations. (一图四式：给定3个数字盒如 [8] [5] [3]，完成2道加法和2道减法)
+  buildKTestQ3FactFamily(stage) {
+    // 选择不相等的两个部分 a > b，避免 a === b 时只有两道算式
+    const pairs = [
+      [5, 3], [6, 2], [6, 3], [6, 4], [7, 2], [7, 3], [7, 4], [7, 5],
+      [8, 3], [8, 5], [9, 4], [9, 5], [6, 5], [8, 4]
+    ];
+    const [a, b] = pairs[Math.floor(Math.random() * pairs.length)];
+    const c = a + b;
+
+    // 4道标准一图四式 (优先重点强化第3、第4道减法，针对孩子试卷中 8 - 3 = 3 的易错点！)
+    const equations = [
+      { id: 0, left1: a, op: '+', left2: b, right: c, isSub: false },
+      { id: 1, left1: b, op: '+', left2: a, right: c, isSub: false },
+      { id: 2, left1: c, op: '-', left2: a, right: b, isSub: true },
+      { id: 3, left1: c, op: '-', left2: b, right: a, isSub: true }
+    ];
+
+    // 75% 概率考减法算式 (尤其是第4道 C - B = A)，25% 概率考加法算式
+    const targetEqIdx = Math.random() < 0.75 ? (Math.random() < 0.65 ? 3 : 2) : (Math.random() < 0.5 ? 0 : 1);
+    const targetEq = equations[targetEqIdx];
+
+    // 决定挖空位置：70% 挖等号右边结果 (如 8 - 3 = [ ? ])，30% 挖被减数或加数 (如 [ ? ] - 3 = 5)
+    const hideResult = Math.random() < 0.72;
+    const correctAnswer = hideResult ? targetEq.right : (targetEq.isSub ? targetEq.left1 : targetEq.left2);
+    const trapValue = (targetEq.isSub && hideResult) ? targetEq.left2 : undefined;
+    const trapHint = trapValue !== undefined
+      ? `小心哦！${c} 减 ${targetEq.left2} 不能等于 ${targetEq.left2} 啦！看上面的三个数字宝宝 ${c}、${a}、${b}，用掉了 ${c} 和 ${targetEq.left2}，还剩下哪一个数字宝宝呢？`
+      : null;
+
+    const titleEn = '3. Write 2 addition and 2 subtraction equations.';
+    const titleZh = `一图四式：只用 [${c}]、[${a}]、[${b}] 这三个数字宝宝，补全第 ${targetEqIdx + 1} 道算式！`;
+    const audioPrompt = hideResult
+      ? `第三题，一图四式。只能用 ${c}、${a}、${b} 这三个数字宝宝，写出两道加法和两道减法。看闪烁的方框：${targetEq.left1} ${targetEq.op === '+' ? '加' : '减'} ${targetEq.left2} 等于几呢？`
+      : `第三题，一图四式。只用 ${c}、${a}、${b} 这三个数字宝宝，几 ${targetEq.op === '+' ? '加' : '减'} ${targetEq.left2} 等于 ${targetEq.right} 呢？`;
+
+    const praiseText = `太棒啦！${c}、${a}、${b} 是一家人：${a} 加 ${b} 等于 ${c}，反过来 ${c} 减 ${targetEq.left2} 就等于 ${targetEq.right}！`;
+
+    this.currentQuestion = {
+      answer: correctAnswer,
+      audioPrompt,
+      praiseText,
+      trapValue,
+      trapHint,
+      type: 'ktest',
+      subType: 'q3'
+    };
+
+    this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+
+    const card = document.createElement('div');
+    card.className = 'ktest-card ktest-q3-card';
+
+    const eqHtml = equations.map((eq, idx) => {
+      const isTarget = idx === targetEqIdx;
+      let l1Html = `<span class="ff-num">${eq.left1}</span>`;
+      let l2Html = `<span class="ff-num">${eq.left2}</span>`;
+      let rHtml = `<span class="ff-num">${eq.right}</span>`;
+
+      if (isTarget) {
+        if (hideResult) {
+          rHtml = `<span class="ff-blank ktest-target-slot mystery-pulse">?</span>`;
+        } else if (eq.isSub) {
+          l1Html = `<span class="ff-blank ktest-target-slot mystery-pulse">?</span>`;
+        } else {
+          l2Html = `<span class="ff-blank ktest-target-slot mystery-pulse">?</span>`;
+        }
+      }
+
+      return `
+        <div class="ff-eq-box ${isTarget ? 'target-eq' : 'solved-eq'}">
+          <span class="ff-eq-tag">${eq.isSub ? '➖ 减法' : '➕ 加法'}</span>
+          <div class="ff-eq-formula">
+            ${l1Html}
+            <span class="ff-op">${eq.op}</span>
+            ${l2Html}
+            <span class="ff-op">=</span>
+            ${rHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="ff-top-row">
+        <div class="ff-number-cards">
+          <div class="ff-card whole-card" title="总数宝宝 ${c}">${c}</div>
+          <div class="ff-card part-card" title="部分宝宝 ${a}">${a}</div>
+          <div class="ff-card part-card" title="部分宝宝 ${b}">${b}</div>
+        </div>
+        <div class="ff-rule-badge">💡 秘诀：每道算式都只能用这 3 个数字宝宝！</div>
+      </div>
+      <div class="ff-equations-grid">
+        ${eqHtml}
+      </div>
+    `;
+
+    stage.appendChild(card);
+
+    // 选项必须包含家族里的 3 个数 c, a, b，以及一个干扰项，训练孩子从 3 个数中选出还没用过的那个数
+    const optSet = new Set([correctAnswer, c, a, b]);
+    while (optSet.size < 4) {
+      const cand = Math.max(1, correctAnswer + (Math.random() > 0.5 ? 1 : -1) * (optSet.size));
+      if (cand > 0) optSet.add(cand);
+    }
+    this.renderOptions(Array.from(optSet).sort(() => 0.5 - Math.random()), correctAnswer);
+  }
+
+  // 真题 Q4: Find the missing numbers. (Addition within 20) (20以内三格数塔：顶格 = 中格 + 底格)
+  buildKTestQ4NumberTowers(stage) {
+    const titleEn = '4. Find the missing numbers. (Addition within 20)';
+
+    // 生成 4 座三格数塔 (前 2~3 座为已完成示范数塔，1 座为含 ? 的目标数塔，贴合原卷排版)
+    const towerPool = [
+      [13, 8, 5], [16, 9, 7], [18, 9, 9], [15, 8, 7],
+      [14, 8, 6], [17, 9, 8], [12, 7, 5], [11, 6, 5],
+      [15, 9, 6], [13, 7, 6], [14, 7, 7], [16, 8, 8]
+    ];
+    const shuffled = [...towerPool].sort(() => 0.5 - Math.random()).slice(0, 4);
+    const targetTowerIdx = Math.random() < 0.5 ? 2 : 3; // 第 3 座或第 4 座作为作答数塔 (与原卷一致)
+    const [topVal, midVal, botVal] = shuffled[targetTowerIdx];
+
+    // 原卷第3座缺底格 [18 | 9 | ?]，第4座缺中格 [15 | ? | 7]，也可偶尔考顶格 [? | 8 | 5]
+    const missingSlot = Math.random() < 0.42 ? 'bot' : (Math.random() < 0.82 ? 'mid' : 'top');
+    const correctAnswer = missingSlot === 'top' ? topVal : (missingSlot === 'mid' ? midVal : botVal);
+
+    const titleZh = missingSlot === 'top'
+      ? `三格数塔：下面两格 ${midVal} + ${botVal} 合起来，最顶上一格应该填几？`
+      : `三格数塔：最顶上是总和 ${topVal}，想一想 ${missingSlot === 'mid' ? `几 + ${botVal} = ${topVal}` : `${midVal} + 几 = ${topVal}`}？`;
+
+    const audioPrompt = missingSlot === 'top'
+      ? `第四题，二十以内三格数塔。数塔下面两个数加起来等于最顶上的数。看看问号那一格，${midVal} 加 ${botVal} 等于几呢？`
+      : `第四题，二十以内三格数塔。下面两格加起来等于顶上的 ${topVal}。那么 ${topVal} 减 ${missingSlot === 'mid' ? botVal : midVal} 等于几呢？点旁边的示范数塔还可以听规律哦！`;
+
+    const praiseText = `太棒啦！在三格数塔里，${midVal} 加 ${botVal} 就等于顶上的 ${topVal}！`;
+
+    this.currentQuestion = {
+      answer: correctAnswer,
+      audioPrompt,
+      praiseText,
+      type: 'ktest',
+      subType: 'q4'
+    };
+
+    this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+
+    const card = document.createElement('div');
+    card.className = 'ktest-card ktest-q4-card';
+
+    const towersRow = document.createElement('div');
+    towersRow.className = 'q4-towers-row';
+
+    shuffled.forEach(([t, m, b], idx) => {
+      const isTarget = idx === targetTowerIdx;
+      const towerEl = document.createElement('div');
+      towerEl.className = `q4-tower ${isTarget ? 'target-tower' : 'example-tower'}`;
+
+      const topCell = (isTarget && missingSlot === 'top')
+        ? `<div class="tower-cell cell-top ktest-target-slot mystery-pulse">?</div>`
+        : `<div class="tower-cell cell-top">${t}</div>`;
+
+      const midCell = (isTarget && missingSlot === 'mid')
+        ? `<div class="tower-cell cell-mid ktest-target-slot mystery-pulse">?</div>`
+        : `<div class="tower-cell cell-mid">${m}</div>`;
+
+      const botCell = (isTarget && missingSlot === 'bot')
+        ? `<div class="tower-cell cell-bot ktest-target-slot mystery-pulse">?</div>`
+        : `<div class="tower-cell cell-bot">${b}</div>`;
+
+      towerEl.innerHTML = `
+        <div class="tower-tag">${isTarget ? '🎯 填一填' : `示范 ${idx + 1}`}</div>
+        <div class="tower-stack">
+          ${topCell}
+          <div class="tower-op-badge">= ${isTarget && missingSlot !== 'top' ? `${t}` : `${m}+${b}`}</div>
+          ${midCell}
+          <div class="tower-plus-divider">+</div>
+          ${botCell}
+        </div>
+      `;
+
+      towerEl.addEventListener('click', () => {
+        window.soundManager.playPop();
+        if (!isTarget) {
+          window.soundManager.speak(`看这座数塔：下面的 ${m} 加 ${b} 等于最上面的 ${t}`);
+        } else {
+          window.soundManager.speak(audioPrompt);
+        }
+      });
+
+      towersRow.appendChild(towerEl);
+    });
+
+    card.appendChild(towersRow);
+
+    const helper = document.createElement('div');
+    helper.className = 'ktest-helper-pill';
+    helper.innerHTML = `💡 规律：<strong>最上格 = 中间格 + 最下格</strong>（点任意示范数塔可听讲解）`;
+    card.appendChild(helper);
+
+    stage.appendChild(card);
+
+    const options = this.generateChoices(correctAnswer, Math.max(2, correctAnswer - 3), correctAnswer + 4, 4);
+    this.renderOptions(options, correctAnswer);
+  }
+
+  // 真题 Q5: Challenge. Fill in the blanks.
+  // (a) "3 more/less than 9 - 4 is ___" (双步文字算式推理)
+  // (b) "8 - 3 = 2 + ___" (双边等式平衡填空)
+  buildKTestQ5Challenge(stage) {
+    const titleEn = '5. Challenge. Fill in the blanks.';
+    const isVerbalMoreLess = Math.random() < 0.5;
+
+    const card = document.createElement('div');
+    card.className = 'ktest-card ktest-q5-card';
+
+    if (isVerbalMoreLess) {
+      // 题型 5(a): "X more/less than A ± B is ___" (原卷原题：3 more than 9 - 4 is ___)
+      const isMore = Math.random() < 0.65;
+      const isInnerSub = Math.random() < 0.65;
+      let a, b, innerVal;
+      if (isInnerSub) {
+        a = Math.floor(Math.random() * 6) + 7; // 7 ~ 12
+        b = Math.floor(Math.random() * 4) + 2; // 2 ~ 5
+        innerVal = a - b;
+      } else {
+        a = Math.floor(Math.random() * 5) + 3; // 3 ~ 7
+        b = Math.floor(Math.random() * 4) + 2; // 2 ~ 5
+        innerVal = a + b;
+      }
+      const delta = isMore
+        ? Math.floor(Math.random() * 4) + 2
+        : Math.max(1, Math.min(4, innerVal - 2));
+      const innerExpr = isInnerSub ? `${a} - ${b}` : `${a} + ${b}`;
+      const correctAnswer = isMore ? innerVal + delta : innerVal - delta;
+
+      const enSentence = `${delta} ${isMore ? 'more' : 'less'} than ${innerExpr} is`;
+      const zhSentence = `比 (${innerExpr}) ${isMore ? '多' : '少'} ${delta} 的数是几？`;
+      const audioPrompt = `第五题压轴挑战：${enSentence} 几？也就是先算出 ${a} ${isInnerSub ? '减' : '加'} ${b} 等于 ${innerVal}，再算比 ${innerVal} ${isMore ? '多' : '少'} ${delta} 的数是几呢？`;
+      const praiseText = `太厉害啦！先算 ${innerExpr} 等于 ${innerVal}，比 ${innerVal} ${isMore ? '多' : '少'} ${delta}，就是 ${innerVal} ${isMore ? '加' : '减'} ${delta} 等于 ${correctAnswer}！`;
+
+      // 如果孩子只算了第一步 innerVal 就直接选了，给出分步提醒
+      const trapValue = innerVal;
+      const trapHint = `${innerVal} 是第一步 ${innerExpr} 的得数哦！题目问的是比它还要${isMore ? '多' : '少'} ${delta}，还要再${isMore ? '加' : '减'} ${delta} 呢！`;
+
+      this.currentQuestion = {
+        answer: correctAnswer,
+        audioPrompt,
+        praiseText,
+        trapValue,
+        trapHint,
+        type: 'ktest',
+        subType: 'q5a'
+      };
+
+      this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${zhSentence}</span>`;
+
+      card.innerHTML = `
+        <div class="q5-verbal-box">
+          <div class="q5-en-line">
+            <span class="q5-highlight-delta">${delta} ${isMore ? 'more' : 'less'} than</span>
+            <span class="q5-highlight-expr">${innerExpr}</span>
+            <span>is</span>
+            <span class="q5-blank-slot ktest-target-slot mystery-pulse">?</span>
+          </div>
+          <div class="q5-zh-line">
+            比 <strong class="expr-badge">${innerExpr}</strong> <strong>${isMore ? `多 ${delta} (+${delta})` : `少 ${delta} (-${delta})`}</strong> 的数是几？
+          </div>
+        </div>
+
+        <div class="q5-steps-row">
+          <div class="q5-step-pill">
+            <span class="step-num">第一步</span>
+            <span>先算 <strong>${innerExpr} = ${innerVal}</strong></span>
+          </div>
+          <div class="q5-step-arrow">➔</div>
+          <div class="q5-step-pill step-two">
+            <span class="step-num">第二步</span>
+            <span>再算比 ${innerVal} ${isMore ? '多' : '少'} ${delta}：<strong>${innerVal} ${isMore ? '+' : '-'} ${delta} = <span class="ktest-step-reveal">?</span></strong></span>
+          </div>
+        </div>
+      `;
+
+      stage.appendChild(card);
+
+      const optSet = new Set([correctAnswer, innerVal]);
+      while (optSet.size < 4) {
+        const cand = Math.max(1, correctAnswer + (Math.floor(Math.random() * 5) - 2));
+        if (cand !== correctAnswer) optSet.add(cand);
+        else optSet.add(correctAnswer + optSet.size);
+      }
+      this.renderOptions(Array.from(optSet).sort(() => 0.5 - Math.random()), correctAnswer);
+
+    } else {
+      // 题型 5(b): 双边等式平衡 "8 - 3 = 2 + ___" (原卷孩子们最易错的压轴题)
+      const isLeftSub = Math.random() < 0.7;
+      let a, b, midVal;
+      if (isLeftSub) {
+        a = Math.floor(Math.random() * 6) + 7; // 7 ~ 12
+        b = Math.floor(Math.random() * 4) + 2; // 2 ~ 5
+        midVal = a - b;                        // 3 ~ 10
+      } else {
+        a = Math.floor(Math.random() * 5) + 3; // 3 ~ 7
+        b = Math.floor(Math.random() * 4) + 2; // 2 ~ 5
+        midVal = a + b;                        // 5 ~ 12
+      }
+
+      const isRightAdd = Math.random() < 0.75;
+      let c, correctAnswer;
+      if (isRightAdd) {
+        c = Math.floor(Math.random() * (midVal - 1)) + 1;
+        correctAnswer = midVal - c;
+      } else {
+        correctAnswer = Math.floor(Math.random() * 4) + 1;
+        c = midVal + correctAnswer;
+      }
+
+      const leftExpr = isLeftSub ? `${a} - ${b}` : `${a} + ${b}`;
+      const rightOp = isRightAdd ? '+' : '-';
+
+      const titleZh = `等式天平：等号两边得数要一样大！${leftExpr} = ${c} ${rightOp} 几？`;
+      const audioPrompt = `第五题等式天平挑战：${a} ${isLeftSub ? '减' : '加'} ${b} 等于 ${c} ${isRightAdd ? '加' : '减'} 几呢？先算出等号左边等于 ${midVal}，再想右边 ${c} ${isRightAdd ? '加' : '减'} 几也等于 ${midVal} 吧！`;
+      const praiseText = `太牛啦！等号左边 ${leftExpr} 等于 ${midVal}，右边 ${c} ${rightOp} ${correctAnswer} 也等于 ${midVal}，两边完全平衡！`;
+
+      // 针对最常见错因：把左边的得数 midVal 直接填进横线 (例如 8 - 3 = 2 + 5)
+      const trapValue = midVal !== correctAnswer ? midVal : undefined;
+      const trapHint = trapValue !== undefined
+        ? `差一点点哦！等号左边 ${leftExpr} 确实等于 ${midVal}，但等号右边还有一个 ${c} ${rightOp} 呢！想想 ${c} ${isRightAdd ? '加' : '减'} 几才等于 ${midVal}？`
+        : null;
+
+      this.currentQuestion = {
+        answer: correctAnswer,
+        audioPrompt,
+        praiseText,
+        trapValue,
+        trapHint,
+        type: 'ktest',
+        subType: 'q5b'
+      };
+
+      this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+
+      card.innerHTML = `
+        <div class="q5-balance-eq-box">
+          <div class="q5-eq-side left-side">
+            <div class="q5-side-formula">${a} ${isLeftSub ? '-' : '+'} ${b}</div>
+            <div class="q5-bridge-tag">左边得数 = <strong>${midVal}</strong></div>
+          </div>
+
+          <div class="q5-eq-sign">=</div>
+
+          <div class="q5-eq-side right-side">
+            <div class="q5-side-formula">
+              <span>${c} ${rightOp}</span>
+              <span class="q5-blank-slot ktest-target-slot mystery-pulse">?</span>
+            </div>
+            <div class="q5-bridge-tag">右边也要 = <strong>${midVal}</strong></div>
+          </div>
+        </div>
+
+        <div class="ktest-helper-pill">
+          💡 天平秘诀：等号两边都等于 <strong>${midVal}</strong>，所以 <strong>${c} ${rightOp} <span class="ktest-step-reveal">?</span> = ${midVal}</strong>
+        </div>
+      `;
+
+      stage.appendChild(card);
+
+      const optSet = new Set([correctAnswer]);
+      if (trapValue !== undefined && trapValue > 0) optSet.add(trapValue);
+      while (optSet.size < 4) {
+        const cand = Math.max(1, correctAnswer + (Math.floor(Math.random() * 5) - 2));
+        if (cand !== correctAnswer) optSet.add(cand);
+        else optSet.add(correctAnswer + optSet.size);
+      }
+      this.renderOptions(Array.from(optSet).sort(() => 0.5 - Math.random()), correctAnswer);
+    }
+  }
+
+  // ================= 9. 60秒极速挑战模式 (计时闯关、连击加分与最高分纪录) =================
   startSpeedrun() {
     this.clearPendingTimers();
     this.speedrunActive = true;
@@ -2172,15 +2858,17 @@ class MathGameApp {
     this.feedbackZoneEl.innerHTML = '';
     this.feedbackZoneEl.className = 'feedback-zone';
 
-    // 综合抽取：加减法、比大小、十格阵、规律小火车、奇妙时钟
+    // 综合抽取：加减法、K班真题特训、比大小、十格阵、规律小火车、奇妙时钟
     const rand = Math.random();
-    if (rand < 0.35) {
+    if (rand < 0.26) {
       this.generateArithmeticQuestion();
-    } else if (rand < 0.58) {
+    } else if (rand < 0.48) {
+      this.generateKTestQuestion();
+    } else if (rand < 0.66) {
       this.generateComparisonQuestion();
-    } else if (rand < 0.76) {
+    } else if (rand < 0.80) {
       this.generateTenFrameQuestion();
-    } else if (rand < 0.90) {
+    } else if (rand < 0.92) {
       this.generatePatternQuestion();
     } else {
       this.generateClockQuestion();
@@ -2308,6 +2996,19 @@ class MathGameApp {
         }
       }
 
+      // K班真题特训：把数键圆圈、一图四式、三格数塔或压轴等式里的问号替换为正确答案
+      if (qType === 'ktest') {
+        this.questionZoneEl.querySelectorAll('.ktest-target-slot').forEach(slot => {
+          slot.textContent = correctValue;
+          slot.classList.remove('mystery-pulse');
+          slot.classList.add('filled-correct');
+        });
+        this.questionZoneEl.querySelectorAll('.ktest-step-reveal').forEach(rev => {
+          rev.textContent = correctValue;
+          rev.classList.add('filled-correct');
+        });
+      }
+
       this.streak++;
 
       // 如果在极速冲刺模式中，计算连击加分
@@ -2349,7 +3050,7 @@ class MathGameApp {
       ];
       let praise = praises[Math.floor(Math.random() * praises.length)];
 
-      // 时钟关卡给出专属时间教学总结
+      // 时钟与K班真题关卡给出专属教学总结
       if (qType === 'clock' && this.currentQuestion) {
         const { hour, minute } = this.currentQuestion;
         praise = minute === 0
@@ -2357,12 +3058,14 @@ class MathGameApp {
           : (minute === 30
               ? `太棒啦！时针走过 ${hour}，分针指着 6，就是 ${hour} 点半！`
               : `完全正确！现在正是 ${hour} 点 ${minute} 分！`);
+      } else if (qType === 'ktest' && this.currentQuestion && this.currentQuestion.praiseText) {
+        praise = this.currentQuestion.praiseText;
       } else if (this.streak > 1 && this.streak % 3 === 0) {
         window.soundManager.playFanfare();
         praise = `太神奇了！连续答对 ${this.streak} 题了！快去扭蛋机看看吧！🎊`;
       }
 
-      if (qType === 'clock' && this.streak > 1 && this.streak % 3 === 0) {
+      if ((qType === 'clock' || qType === 'ktest') && this.streak > 1 && this.streak % 3 === 0) {
         window.soundManager.playFanfare();
       }
 
@@ -2421,7 +3124,15 @@ class MathGameApp {
         '没关系，再看一眼题目，你一定行！🌸',
         '不要着急，深呼吸再试一次吧！☀️'
       ];
-      const encText = encouragements[Math.floor(Math.random() * encouragements.length)];
+      let encText = encouragements[Math.floor(Math.random() * encouragements.length)];
+      if (
+        this.currentQuestion &&
+        this.currentQuestion.trapValue !== undefined &&
+        selectedValue.toString() === this.currentQuestion.trapValue.toString() &&
+        this.currentQuestion.trapHint
+      ) {
+        encText = this.currentQuestion.trapHint;
+      }
       this.setMascot(encText);
       if (!this.speedrunActive) {
         window.soundManager.speak(encText);
