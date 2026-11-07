@@ -3925,3 +3925,7 @@ body {
     font-size: 15.5px;
   }
 }
+
+:root {
+  --math-css-build: "20261106_v7";
+}

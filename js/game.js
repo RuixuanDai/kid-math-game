@@ -1,5 +1,6 @@
 // 6岁儿童数学小王国 - 智能自适应与自定义题库旗舰版
 // 支持「智能自适应闯关」与「⚙️ 设置中心自定义题型/难度/全屏/音效/家长防改锁」，精简答题后语音反馈，节奏轻快不拖沓
+window.__MATH_GAME_BUILD = '20261106_v7';
 
 class MathGameApp {
   constructor() {
@@ -193,7 +194,9 @@ class MathGameApp {
 
     // 顶栏 ⚙️ 设置 按钮
     if (this.settingsBtn) {
-      this.settingsBtn.addEventListener('click', () => {
+      window.__kmgSettingsBound = true;
+      this.settingsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         window.soundManager.playPop();
         this.openSettingsRequest();
       });
@@ -416,8 +419,11 @@ class MathGameApp {
     if (voiceRoleBtn) {
       voiceRoleBtn.addEventListener('click', () => {
         window.soundManager.playPop();
-        window.soundManager.cycleVoice();
+        if (!window.soundManager.voiceEnabled) {
+          window.soundManager.setVoiceEnabled(true);
+        }
         this.syncQuickSettingsTiles();
+        window.soundManager.speak('声音正常，准备闯关吧！');
       });
     }
 
@@ -583,8 +589,8 @@ class MathGameApp {
     const roleLabel = document.getElementById('voice-role-label');
     if (roleLabel && window.soundManager.getActiveVoiceOption) {
       const opt = window.soundManager.getActiveVoiceOption();
-      if (roleIcon && opt.emoji) roleIcon.textContent = opt.emoji;
-      roleLabel.textContent = `音色：${opt.shortLabel || '默认'}`;
+      if (roleIcon) roleIcon.textContent = '🎵';
+      roleLabel.textContent = `试听语音（${opt.shortLabel || '晓晓'}）`;
     }
 
     const lockTile = document.getElementById('parent-lock-toggle');
@@ -4179,13 +4185,23 @@ class MathGameApp {
 
     if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
+        navigator.serviceWorker
+          .register('./sw.js', { updateViaCache: 'none' })
+          .then((reg) => { reg.update().catch(() => {}); })
+          .catch(() => {});
       });
     }
   }
 }
 
-// 启动游戏实例
-window.addEventListener('DOMContentLoaded', () => {
-  window.mathGameApp = new MathGameApp();
-});
+// 启动游戏实例（兼容 DOM 已加载或尚未加载两种状态）
+const bootMathGameApp = () => {
+  if (!window.mathGameApp) {
+    window.mathGameApp = new MathGameApp();
+  }
+};
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', bootMathGameApp);
+} else {
+  bootMathGameApp();
+}

@@ -1,5 +1,5 @@
-// 童趣数学小王国 - PWA Service Worker (支持离线畅玩 + 自动热更新 + 绕过在线语音动态签名请求)
-const CACHE_NAME = 'kid-math-pwa-v20261106-settings-v6';
+// 童趣数学小王国 - PWA Service Worker (Network-First 实时热更新 + 断网离线畅玩兜底)
+const CACHE_NAME = 'kid-math-pwa-v20261106-settings-v7';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -55,7 +55,7 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
 
-  // 1. 绝不拦截 /api/tts 在线语音接口（保留动态签名与 CORS 边缘缓存通道）
+  // 1. 绝不拦截 /api/tts 在线语音接口
   if (url.pathname.includes('/api/tts') || url.pathname === '/qr') {
     return;
   }
@@ -65,19 +65,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 忽略版本号查询参数匹配核心静态文件 (如 css/style.css?v=...)
   const cleanUrl = new URL(url.origin + url.pathname);
+  const isCodeOrDoc =
+    req.mode === 'navigate' ||
+    url.pathname.endsWith('/') ||
+    url.pathname.endsWith('.html') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.webmanifest');
 
-  // HTML 页面导航采用 Network-First，断网时回退缓存
-  if (req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
+  // 3. HTML / JS / CSS / Manifest 全部采用 Network-First（杜绝旧缓存吞掉新功能），仅在断网离线时回退缓存
+  if (isCodeOrDoc) {
     event.respondWith(
       fetch(req)
         .then((networkRes) => {
           if (networkRes && networkRes.ok) {
             const copy = networkRes.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(req, copy);
-              cache.put('./index.html', copy.clone());
+              cache.put(req, copy.clone());
+              cache.put(cleanUrl, copy);
             });
           }
           return networkRes;
@@ -86,15 +92,14 @@ self.addEventListener('fetch', (event) => {
           const cached =
             (await caches.match(req)) ||
             (await caches.match(cleanUrl)) ||
-            (await caches.match('./index.html')) ||
-            (await caches.match('./'));
+            (req.mode === 'navigate' ? (await caches.match('./index.html')) || (await caches.match('./')) : null);
           return cached || Response.error();
         })
     );
     return;
   }
 
-  // JS / CSS / 图标等静态资源采用 Stale-While-Revalidate + Network 更新
+  // 4. 图标等纯静态图片采用 Cache-First + 后台更新
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       const cached = (await cache.match(req)) || (await cache.match(cleanUrl));

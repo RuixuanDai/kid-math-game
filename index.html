@@ -17,7 +17,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261106_settings_v6">
+  <link rel="stylesheet" href="css/style.css?v=20261106_v7">
 </head>
 <body>
 
@@ -80,7 +80,7 @@
         </button>
 
         <!-- 设置中心入口 (题型、难度、全屏、声音等集中管理) -->
-        <button id="settings-btn" class="candy-btn btn-settings" data-no-tts="true" title="打开设置：自选题型、调节难度、切换全屏与语音">
+        <button id="settings-btn" class="candy-btn btn-settings" data-no-tts="true" title="打开设置：自选题型、调节难度、切换全屏与语音" onclick="if(!window.__kmgSettingsBound){if(window.mathGameApp&&window.mathGameApp.openSettingsRequest){window.mathGameApp.openSettingsRequest();}else{var m=document.getElementById('settings-modal');if(m)m.classList.add('active');}}">
           <span>⚙️ 设置</span>
         </button>
       </div>
@@ -320,8 +320,8 @@
               <span class="tile-label" id="voice-label">读题：开启</span>
             </button>
             <button type="button" id="voice-role-btn" class="settings-toggle-tile" data-no-tts="true">
-              <span class="tile-icon" id="voice-role-icon">🎙️</span>
-              <span class="tile-label" id="voice-role-label">切换语音音色</span>
+              <span class="tile-icon" id="voice-role-icon">🎵</span>
+              <span class="tile-label" id="voice-role-label">试听语音（晓晓）</span>
             </button>
             <button type="button" id="parent-lock-toggle" class="settings-toggle-tile" data-no-tts="true">
               <span class="tile-icon" id="parent-lock-icon">🔓</span>
@@ -401,11 +401,47 @@
     </div>
   </div>
 
-  <!-- 脚本加载 (带版本号强制刷新缓存) -->
-  <script src="lib/web-natural-tts.js?v=20261106_settings_v6"></script>
-  <script src="lib/web-online-tts.js?v=20261106_settings_v6"></script>
-  <script src="js/audio.js?v=20261106_settings_v6"></script>
-  <script src="js/confetti.js?v=20261106_settings_v6"></script>
-  <script src="js/game.js?v=20261106_settings_v6"></script>
+  <!-- 脚本加载 (带版本号强制刷新缓存 + 旧版 Service Worker 缓存自动自愈) -->
+  <script src="lib/web-natural-tts.js?v=20261106_v7"></script>
+  <script src="lib/web-online-tts.js?v=20261106_v7"></script>
+  <script src="js/audio.js?v=20261106_v7"></script>
+  <script src="js/confetti.js?v=20261106_v7"></script>
+  <script src="js/game.js?v=20261106_v7"></script>
+  <script>
+    (function () {
+      var EXPECTED = '20261106_v7';
+      var cssVer = '';
+      try {
+        cssVer = getComputedStyle(document.documentElement)
+          .getPropertyValue('--math-css-build')
+          .replace(/["'\s]/g, '');
+      } catch (e) {}
+      if (window.__MATH_GAME_BUILD !== EXPECTED || cssVer !== EXPECTED) {
+        var guardKey = 'kmg_sw_healed_' + EXPECTED;
+        try {
+          if (sessionStorage.getItem(guardKey) === '1') return;
+          sessionStorage.setItem(guardKey, '1');
+        } catch (e) {}
+        var tasks = [];
+        if ('caches' in window) {
+          tasks.push(
+            caches.keys().then(function (keys) {
+              return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            })
+          );
+        }
+        if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
+          tasks.push(
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              return Promise.all(regs.map(function (r) { return r.unregister(); }));
+            })
+          );
+        }
+        Promise.all(tasks).finally(function () {
+          window.location.reload();
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
