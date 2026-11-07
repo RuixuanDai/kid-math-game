@@ -7,6 +7,7 @@ class MathGameApp {
     this.currentMode = 'counting'; // 'counting' | 'comparison' | 'arithmetic' | 'patterns' | 'tenframes' | 'clocks' | 'blocks' | 'ktest' | 'speedrun'
     this.difficulty = '20';
     this.ktestSubType = 'all'; // 'all' | 'q1' | 'q2' | 'q3' | 'q4' | 'q5'
+    this.lastKTestType = null;
     this.stars = parseInt(localStorage.getItem('kid_math_stars') || '8', 10);
     this.unlockedStickers = JSON.parse(localStorage.getItem('kid_math_stickers') || '["bunny", "sun", "icecream"]');
     this.bestSprintScore = parseInt(localStorage.getItem('kid_math_best_sprint') || '0', 10);
@@ -410,9 +411,9 @@ class MathGameApp {
         { diff: '100', label: '挑战 (10~14块)', tip: '3层立体建筑与柱体标数法' }
       ],
       ktest: [
-        { diff: '10', label: '数键与四式', tip: 'Q2连环数字分合图 & Q3一图四式(2加2减)' },
-        { diff: '20', label: '凑十与数塔', tip: 'Q1凑十数键分支图 & Q4二十以内三格数塔' },
-        { diff: '100', label: '压轴挑战卷', tip: 'Q5双步多/少推理、双边等式平衡与全卷综合' }
+        { diff: '10', label: '初级真题', tip: '基础数字范围，随机抽考5大真题题型' },
+        { diff: '20', label: '进阶真题', tip: '20以内进退位，随机抽考5大真题题型' },
+        { diff: '100', label: '挑战真题', tip: '高阶思维挑战，随机抽考5大真题题型' }
       ]
     };
     return diffMap[mode] || null;
@@ -2133,17 +2134,17 @@ class MathGameApp {
     const stage = document.createElement('div');
     stage.className = 'ktest-stage-wrap';
 
-    // 非冲刺模式下顶部渲染 6 颗题型快捷切换胶囊，方便家长与孩子指定练习试卷某一道大题
+    // 非冲刺模式下顶部渲染 6 颗题型快捷切换胶囊，方便随机抽考或指定专项练习
     if (!this.speedrunActive) {
       const filterBar = document.createElement('div');
       filterBar.className = 'ktest-filter-bar';
       const subTypes = [
-        { id: 'all', label: '🎲 综合真题' },
-        { id: 'q1', label: '① 凑十数键' },
-        { id: 'q2', label: '② 连环分合' },
-        { id: 'q3', label: '③ 一图四式' },
-        { id: 'q4', label: '④ 三格数塔' },
-        { id: 'q5', label: '⑤ 压轴挑战' }
+        { id: 'all', label: '🎲 随机题型' },
+        { id: 'q1', label: '凑十数键' },
+        { id: 'q2', label: '连环分合' },
+        { id: 'q3', label: '一图四式' },
+        { id: 'q4', label: '三格数塔' },
+        { id: 'q5', label: '等式挑战' }
       ];
       subTypes.forEach(item => {
         const pill = document.createElement('button');
@@ -2159,19 +2160,16 @@ class MathGameApp {
       stage.appendChild(filterBar);
     }
 
-    // 根据选定专项或当前难度档位抽取题型
+    // 当处于「🎲 随机题型」或极速冲刺时，从全部 5 大题型中真随机抽取（并避免连续两题完全同款）
     let chosenType = this.ktestSubType;
     if (chosenType === 'all' || this.speedrunActive) {
-      if (this.difficulty === '10') {
-        chosenType = Math.random() < 0.5 ? 'q2' : 'q3';
-      } else if (this.difficulty === '20') {
-        chosenType = Math.random() < 0.5 ? 'q1' : 'q4';
-      } else {
-        // 100 压轴挑战卷：Q5 占 60%，其余 Q1~Q4 综合抽考 40%
-        const pool = ['q5', 'q5', 'q5', 'q1', 'q2', 'q3', 'q4'];
-        chosenType = pool[Math.floor(Math.random() * pool.length)];
-      }
+      const allTypes = ['q1', 'q2', 'q3', 'q4', 'q5'];
+      const candidates = this.lastKTestType
+        ? allTypes.filter(t => t !== this.lastKTestType)
+        : allTypes;
+      chosenType = candidates[Math.floor(Math.random() * candidates.length)];
     }
+    this.lastKTestType = chosenType;
 
     this.questionZoneEl.appendChild(stage);
 
@@ -2195,13 +2193,13 @@ class MathGameApp {
     }
   }
 
-  // 真题 Q1: Make ten. Complete the number bond. (凑十数键分支图，如 8 + 5 = 13，5 拆成 2 和 3)
+  // 真题题型 1: 凑十数键分支图 (如 8 + 5 = 13，5 拆成 2 和 3)
   buildKTestQ1MakeTenBond(stage) {
-    const aPool = [9, 8, 7, 6];
+    const aPool = this.difficulty === '10' ? [9, 8] : [9, 8, 7, 6];
     const a = aPool[Math.floor(Math.random() * aPool.length)];
     const needForTen = 10 - a;
     const minB = needForTen + 1;
-    const maxB = 9;
+    const maxB = this.difficulty === '10' ? Math.min(7, needForTen + 4) : 9;
     const b = Math.floor(Math.random() * (maxB - minB + 1)) + minB;
     const rem = b - needForTen;
     const total = a + b;
@@ -2210,14 +2208,13 @@ class MathGameApp {
     const askBondCircle = Math.random() < 0.45;
     const correctAnswer = askBondCircle ? rem : total;
 
-    const titleEn = '1. Make ten. Complete the number bond.';
     const titleZh = askBondCircle
       ? `凑十数键：${a} 需要 ${needForTen} 凑成 10，那 ${b} 可以分成 ${needForTen} 和几？`
       : `凑十数键：先把 ${a} 和 ${needForTen} 凑成 10，再算 ${a} + ${b} 等于几？`;
 
     const audioPrompt = askBondCircle
-      ? `第一题，凑十数键图。${a} 加 ${needForTen} 凑成 10，把 ${b} 分成 ${needForTen} 和几呢？`
-      : `第一题，凑十法算一算。把 ${b} 分成 ${needForTen} 和 ${rem}，${a} 加 ${needForTen} 等于 10，10 再加 ${rem} 等于几呢？`;
+      ? `凑十数键图：${a} 加 ${needForTen} 凑成 10，那把 ${b} 分成 ${needForTen} 和几呢？`
+      : `凑十法算一算：把 ${b} 分成 ${needForTen} 和 ${rem}，${a} 加 ${needForTen} 等于 10，10 再加 ${rem} 等于几呢？`;
 
     const praiseText = `太棒啦！把 ${b} 分成 ${needForTen} 和 ${rem}，${a} 加 ${needForTen} 凑成 10，10 加 ${rem} 就等于 ${total}！`;
 
@@ -2229,7 +2226,7 @@ class MathGameApp {
       subType: 'q1'
     };
 
-    this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+    this.questionTextEl.innerHTML = `<span>${titleZh}</span>`;
 
     const card = document.createElement('div');
     card.className = 'ktest-card ktest-q1-card';
@@ -2238,34 +2235,31 @@ class MathGameApp {
         <div class="q1-equation-row">
           <div class="q1-num-token q1-num-a" title="点击听凑十秘诀">${a}</div>
           <div class="q1-op-token">+</div>
-          <div class="q1-num-token q1-num-b">${b}</div>
+          <div class="q1-b-anchor">
+            <div class="q1-num-token q1-num-b">${b}</div>
+            <!-- 倒V型数键分支严格居中锚定在第二个加数 b 正下方 -->
+            <div class="q1-bond-under-b">
+              <div class="q1-maketen-bridge" title="点击听凑十过程">
+                <span class="bridge-badge">✨ ${a}+${needForTen}=10</span>
+              </div>
+              <svg class="q1-bond-legs-svg" viewBox="0 0 140 42" aria-hidden="true">
+                <line x1="70" y1="2" x2="31" y2="39" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+                <line x1="70" y1="2" x2="109" y2="39" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+              </svg>
+              <div class="q1-bond-circles-row">
+                <div class="bond-circle shaded" title="${a} + ${needForTen} = 10">${needForTen}</div>
+                ${askBondCircle
+                  ? `<div class="bond-circle ktest-target-slot mystery-pulse">?</div>`
+                  : `<div class="bond-circle unshaded" title="10 + ${rem} = ${total}">${rem}</div>`
+                }
+              </div>
+            </div>
+          </div>
           <div class="q1-op-token">=</div>
           ${askBondCircle
             ? `<div class="q1-result-box solved">${total}</div>`
             : `<div class="q1-result-box ktest-target-slot mystery-pulse">?</div>`
           }
-        </div>
-
-        <div class="q1-bond-area">
-          <!-- 凑十虚线桥：连接第一个加数 a 与左侧凑十圆圈 needForTen -->
-          <div class="q1-maketen-bridge" title="点击听凑十过程">
-            <span class="bridge-badge">✨ ${a} + ${needForTen} = 10</span>
-          </div>
-
-          <!-- 倒V型数键分支下挂在第二个加数 b 正下方 -->
-          <div class="q1-bond-under-b">
-            <svg class="q1-bond-legs-svg" viewBox="0 0 140 44" aria-hidden="true">
-              <line x1="70" y1="2" x2="30" y2="40" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
-              <line x1="70" y1="2" x2="110" y2="40" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
-            </svg>
-            <div class="q1-bond-circles-row">
-              <div class="bond-circle shaded" title="${a} + ${needForTen} = 10">${needForTen}</div>
-              ${askBondCircle
-                ? `<div class="bond-circle ktest-target-slot mystery-pulse">?</div>`
-                : `<div class="bond-circle unshaded" title="10 + ${rem} = ${total}">${rem}</div>`
-              }
-            </div>
-          </div>
         </div>
       </div>
       <div class="ktest-helper-pill" id="q1-helper-pill">
@@ -2286,20 +2280,21 @@ class MathGameApp {
     this.renderOptions(options, correctAnswer);
   }
 
-  // 真题 Q2: Complete the number bonds. (多级连环数字分合图：左款自上而下连环拆、右款自左向右连环合)
+  // 真题题型 2: 多级连环数字分合图 (左款自上而下连环拆、右款自左向右连环合)
   buildKTestQ2ChainedBonds(stage) {
     const isLeftStyle = Math.random() < 0.5;
-    const titleEn = '2. Complete the number bonds.';
 
     const card = document.createElement('div');
     card.className = 'ktest-card ktest-q2-card';
 
     if (isLeftStyle) {
       // 试卷左图：顶圆 Whole (深灰已知) -> 左中 Mid & 右中 P1 (深灰已知)；左中 Mid -> 左下 P2 (深灰已知) & 右下 P3
-      const whole = Math.floor(Math.random() * 6) + 7; // 7 ~ 12
+      const maxWhole = this.difficulty === '10' ? 9 : (this.difficulty === '20' ? 14 : 18);
+      const minWhole = this.difficulty === '10' ? 6 : 8;
+      const whole = Math.floor(Math.random() * (maxWhole - minWhole + 1)) + minWhole;
       const p1 = Math.floor(Math.random() * 3) + 2;    // 2 ~ 4
-      const mid = whole - p1;                          // 4 ~ 9
-      const p2 = Math.floor(Math.random() * (mid - 2)) + 1;
+      const mid = whole - p1;
+      const p2 = Math.floor(Math.random() * Math.max(1, mid - 2)) + 1;
       const p3 = mid - p2;
 
       const askMid = Math.random() < 0.5;
@@ -2310,8 +2305,8 @@ class MathGameApp {
         : `连环数键：${whole} 分成 ${mid} 和 ${p1}，那 ${mid} 再分成 ${p2} 和几呢？`;
 
       const audioPrompt = askMid
-        ? `第二题，连环数键分合图。顶上的 ${whole} 分成几和 ${p1} 呢？下面还能看到它分成了 ${p2} 和 ${p3} 哦！`
-        : `第二题，连环数键分合图。${whole} 分成 ${mid} 和 ${p1}，中间的 ${mid} 又分成 ${p2} 和几呢？`;
+        ? `连环数键分合图：顶上的 ${whole} 分成几和 ${p1} 呢？下面还能看到它分成了 ${p2} 和 ${p3} 哦！`
+        : `连环数键分合图：${whole} 分成 ${mid} 和 ${p1}，中间的 ${mid} 又分成 ${p2} 和几呢？`;
 
       const praiseText = `完全正确！${whole} 分成 ${mid} 和 ${p1}，${mid} 再分成 ${p2} 和 ${p3}！`;
 
@@ -2323,7 +2318,7 @@ class MathGameApp {
         subType: 'q2'
       };
 
-      this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+      this.questionTextEl.innerHTML = `<span>${titleZh}</span>`;
 
       card.innerHTML = `
         <div class="q2-bond-svg-stage">
@@ -2360,11 +2355,12 @@ class MathGameApp {
 
     } else {
       // 试卷右图：左上 A (深灰) + 左下 B (深灰) -> 中间 Mid；中间 Mid + 下方 C -> 右侧总数 Whole (深灰)
-      const a = Math.floor(Math.random() * 4) + 2; // 2 ~ 5
-      const b = Math.floor(Math.random() * 4) + 2; // 2 ~ 5
-      const mid = a + b;                           // 4 ~ 10
-      const c = Math.floor(Math.random() * 4) + 1; // 1 ~ 4
-      const whole = mid + c;                       // 5 ~ 14
+      const maxPart = this.difficulty === '10' ? 4 : 6;
+      const a = Math.floor(Math.random() * (maxPart - 1)) + 2;
+      const b = Math.floor(Math.random() * (maxPart - 1)) + 2;
+      const mid = a + b;
+      const c = Math.floor(Math.random() * 4) + 1;
+      const whole = mid + c;
 
       const askMid = Math.random() < 0.5;
       const correctAnswer = askMid ? mid : c;
@@ -2374,8 +2370,8 @@ class MathGameApp {
         : `连环数键：${a} 和 ${b} 合起来是 ${mid}，那 ${mid} 再和几合起来是 ${whole}？`;
 
       const audioPrompt = askMid
-        ? `第二题，连环数键分合图。左边的 ${a} 和 ${b} 合起来等于中间的几呢？`
-        : `第二题，连环数键分合图。${a} 加 ${b} 等于 ${mid}，${mid} 再加下面圆圈里的几等于最右边的 ${whole} 呢？`;
+        ? `连环数键分合图：左边的 ${a} 和 ${b} 合起来等于中间的几呢？`
+        : `连环数键分合图：${a} 加 ${b} 等于 ${mid}，${mid} 再加下面圆圈里的几等于最右边的 ${whole} 呢？`;
 
       const praiseText = `太聪明啦！${a} 和 ${b} 合起来是 ${mid}，${mid} 和 ${c} 合起来就是 ${whole}！`;
 
@@ -2387,7 +2383,7 @@ class MathGameApp {
         subType: 'q2'
       };
 
-      this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+      this.questionTextEl.innerHTML = `<span>${titleZh}</span>`;
 
       card.innerHTML = `
         <div class="q2-bond-svg-stage">
@@ -2424,13 +2420,12 @@ class MathGameApp {
     }
   }
 
-  // 真题 Q3: Write 2 addition and 2 subtraction equations. (一图四式：给定3个数字盒如 [8] [5] [3]，完成2道加法和2道减法)
+  // 真题题型 3: 一图四式 (给定3个数字盒如 [8] [5] [3]，完成2道加法和2道减法)
   buildKTestQ3FactFamily(stage) {
     // 选择不相等的两个部分 a > b，避免 a === b 时只有两道算式
-    const pairs = [
-      [5, 3], [6, 2], [6, 3], [6, 4], [7, 2], [7, 3], [7, 4], [7, 5],
-      [8, 3], [8, 5], [9, 4], [9, 5], [6, 5], [8, 4]
-    ];
+    const pairs10 = [[5, 3], [6, 2], [6, 3], [6, 4], [7, 2], [7, 3], [5, 4]];
+    const pairs20 = [[8, 3], [8, 5], [9, 4], [9, 5], [7, 5], [8, 6], [9, 7]];
+    const pairs = this.difficulty === '10' ? pairs10 : (this.difficulty === '20' ? [...pairs10, ...pairs20] : pairs20);
     const [a, b] = pairs[Math.floor(Math.random() * pairs.length)];
     const c = a + b;
 
@@ -2454,11 +2449,10 @@ class MathGameApp {
       ? `小心哦！${c} 减 ${targetEq.left2} 不能等于 ${targetEq.left2} 啦！看上面的三个数字宝宝 ${c}、${a}、${b}，用掉了 ${c} 和 ${targetEq.left2}，还剩下哪一个数字宝宝呢？`
       : null;
 
-    const titleEn = '3. Write 2 addition and 2 subtraction equations.';
-    const titleZh = `一图四式：只用 [${c}]、[${a}]、[${b}] 这三个数字宝宝，补全第 ${targetEqIdx + 1} 道算式！`;
+    const titleZh = `一图四式：只用 [${c}]、[${a}]、[${b}] 这三个数字宝宝，补全算式里的问号！`;
     const audioPrompt = hideResult
-      ? `第三题，一图四式。只能用 ${c}、${a}、${b} 这三个数字宝宝，写出两道加法和两道减法。看闪烁的方框：${targetEq.left1} ${targetEq.op === '+' ? '加' : '减'} ${targetEq.left2} 等于几呢？`
-      : `第三题，一图四式。只用 ${c}、${a}、${b} 这三个数字宝宝，几 ${targetEq.op === '+' ? '加' : '减'} ${targetEq.left2} 等于 ${targetEq.right} 呢？`;
+      ? `一图四式：只能用 ${c}、${a}、${b} 这三个数字宝宝，写出两道加法和两道减法。看闪烁的方框：${targetEq.left1} ${targetEq.op === '+' ? '加' : '减'} ${targetEq.left2} 等于几呢？`
+      : `一图四式：只用 ${c}、${a}、${b} 这三个数字宝宝，几 ${targetEq.op === '+' ? '加' : '减'} ${targetEq.left2} 等于 ${targetEq.right} 呢？`;
 
     const praiseText = `太棒啦！${c}、${a}、${b} 是一家人：${a} 加 ${b} 等于 ${c}，反过来 ${c} 减 ${targetEq.left2} 就等于 ${targetEq.right}！`;
 
@@ -2472,7 +2466,7 @@ class MathGameApp {
       subType: 'q3'
     };
 
-    this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+    this.questionTextEl.innerHTML = `<span>${titleZh}</span>`;
 
     const card = document.createElement('div');
     card.className = 'ktest-card ktest-q3-card';
@@ -2532,16 +2526,19 @@ class MathGameApp {
     this.renderOptions(Array.from(optSet).sort(() => 0.5 - Math.random()), correctAnswer);
   }
 
-  // 真题 Q4: Find the missing numbers. (Addition within 20) (20以内三格数塔：顶格 = 中格 + 底格)
+  // 真题题型 4: 三格数塔 (顶格 = 中格 + 底格)
   buildKTestQ4NumberTowers(stage) {
-    const titleEn = '4. Find the missing numbers. (Addition within 20)';
-
     // 生成 4 座三格数塔 (前 2~3 座为已完成示范数塔，1 座为含 ? 的目标数塔，贴合原卷排版)
-    const towerPool = [
+    const towerPool10 = [
+      [9, 5, 4], [10, 6, 4], [8, 5, 3], [10, 7, 3],
+      [9, 6, 3], [8, 4, 4], [10, 8, 2], [7, 4, 3]
+    ];
+    const towerPool20 = [
       [13, 8, 5], [16, 9, 7], [18, 9, 9], [15, 8, 7],
       [14, 8, 6], [17, 9, 8], [12, 7, 5], [11, 6, 5],
       [15, 9, 6], [13, 7, 6], [14, 7, 7], [16, 8, 8]
     ];
+    const towerPool = this.difficulty === '10' ? towerPool10 : towerPool20;
     const shuffled = [...towerPool].sort(() => 0.5 - Math.random()).slice(0, 4);
     const targetTowerIdx = Math.random() < 0.5 ? 2 : 3; // 第 3 座或第 4 座作为作答数塔 (与原卷一致)
     const [topVal, midVal, botVal] = shuffled[targetTowerIdx];
@@ -2555,8 +2552,8 @@ class MathGameApp {
       : `三格数塔：最顶上是总和 ${topVal}，想一想 ${missingSlot === 'mid' ? `几 + ${botVal} = ${topVal}` : `${midVal} + 几 = ${topVal}`}？`;
 
     const audioPrompt = missingSlot === 'top'
-      ? `第四题，二十以内三格数塔。数塔下面两个数加起来等于最顶上的数。看看问号那一格，${midVal} 加 ${botVal} 等于几呢？`
-      : `第四题，二十以内三格数塔。下面两格加起来等于顶上的 ${topVal}。那么 ${topVal} 减 ${missingSlot === 'mid' ? botVal : midVal} 等于几呢？点旁边的示范数塔还可以听规律哦！`;
+      ? `三格数塔：数塔下面两个数加起来等于最顶上的数。看看问号那一格，${midVal} 加 ${botVal} 等于几呢？`
+      : `三格数塔：下面两格加起来等于顶上的 ${topVal}。那么 ${topVal} 减 ${missingSlot === 'mid' ? botVal : midVal} 等于几呢？点旁边的示范数塔还可以听规律哦！`;
 
     const praiseText = `太棒啦！在三格数塔里，${midVal} 加 ${botVal} 就等于顶上的 ${topVal}！`;
 
@@ -2568,7 +2565,7 @@ class MathGameApp {
       subType: 'q4'
     };
 
-    this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+    this.questionTextEl.innerHTML = `<span>${titleZh}</span>`;
 
     const card = document.createElement('div');
     card.className = 'ktest-card ktest-q4-card';
@@ -2629,18 +2626,17 @@ class MathGameApp {
     this.renderOptions(options, correctAnswer);
   }
 
-  // 真题 Q5: Challenge. Fill in the blanks.
-  // (a) "3 more/less than 9 - 4 is ___" (双步文字算式推理)
+  // 真题题型 5: 压轴思维挑战
+  // (a) "比 9 - 4 多 3 的数是 ___" (双步文字算式推理)
   // (b) "8 - 3 = 2 + ___" (双边等式平衡填空)
   buildKTestQ5Challenge(stage) {
-    const titleEn = '5. Challenge. Fill in the blanks.';
     const isVerbalMoreLess = Math.random() < 0.5;
 
     const card = document.createElement('div');
     card.className = 'ktest-card ktest-q5-card';
 
     if (isVerbalMoreLess) {
-      // 题型 5(a): "X more/less than A ± B is ___" (原卷原题：3 more than 9 - 4 is ___)
+      // 题型 5(a): "比 A ± B 多/少 X 的数是 ___"
       const isMore = Math.random() < 0.65;
       const isInnerSub = Math.random() < 0.65;
       let a, b, innerVal;
@@ -2659,9 +2655,8 @@ class MathGameApp {
       const innerExpr = isInnerSub ? `${a} - ${b}` : `${a} + ${b}`;
       const correctAnswer = isMore ? innerVal + delta : innerVal - delta;
 
-      const enSentence = `${delta} ${isMore ? 'more' : 'less'} than ${innerExpr} is`;
-      const zhSentence = `比 (${innerExpr}) ${isMore ? '多' : '少'} ${delta} 的数是几？`;
-      const audioPrompt = `第五题压轴挑战：${enSentence} 几？也就是先算出 ${a} ${isInnerSub ? '减' : '加'} ${b} 等于 ${innerVal}，再算比 ${innerVal} ${isMore ? '多' : '少'} ${delta} 的数是几呢？`;
+      const zhSentence = `思维挑战：比 (${innerExpr}) ${isMore ? '多' : '少'} ${delta} 的数是几？`;
+      const audioPrompt = `思维挑战：比 ${a} ${isInnerSub ? '减' : '加'} ${b} ${isMore ? '多' : '少'} ${delta} 的数是几？先算出 ${a} ${isInnerSub ? '减' : '加'} ${b} 等于 ${innerVal}，再算比 ${innerVal} ${isMore ? '多' : '少'} ${delta} 的数是几呢？`;
       const praiseText = `太厉害啦！先算 ${innerExpr} 等于 ${innerVal}，比 ${innerVal} ${isMore ? '多' : '少'} ${delta}，就是 ${innerVal} ${isMore ? '加' : '减'} ${delta} 等于 ${correctAnswer}！`;
 
       // 如果孩子只算了第一步 innerVal 就直接选了，给出分步提醒
@@ -2678,18 +2673,16 @@ class MathGameApp {
         subType: 'q5a'
       };
 
-      this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${zhSentence}</span>`;
+      this.questionTextEl.innerHTML = `<span>${zhSentence}</span>`;
 
       card.innerHTML = `
         <div class="q5-verbal-box">
           <div class="q5-en-line">
-            <span class="q5-highlight-delta">${delta} ${isMore ? 'more' : 'less'} than</span>
+            <span>比</span>
             <span class="q5-highlight-expr">${innerExpr}</span>
-            <span>is</span>
+            <span class="q5-highlight-delta">${isMore ? `多 ${delta}` : `少 ${delta}`}</span>
+            <span>的数是</span>
             <span class="q5-blank-slot ktest-target-slot mystery-pulse">?</span>
-          </div>
-          <div class="q5-zh-line">
-            比 <strong class="expr-badge">${innerExpr}</strong> <strong>${isMore ? `多 ${delta} (+${delta})` : `少 ${delta} (-${delta})`}</strong> 的数是几？
           </div>
         </div>
 
@@ -2744,7 +2737,7 @@ class MathGameApp {
       const rightOp = isRightAdd ? '+' : '-';
 
       const titleZh = `等式天平：等号两边得数要一样大！${leftExpr} = ${c} ${rightOp} 几？`;
-      const audioPrompt = `第五题等式天平挑战：${a} ${isLeftSub ? '减' : '加'} ${b} 等于 ${c} ${isRightAdd ? '加' : '减'} 几呢？先算出等号左边等于 ${midVal}，再想右边 ${c} ${isRightAdd ? '加' : '减'} 几也等于 ${midVal} 吧！`;
+      const audioPrompt = `等式天平挑战：${a} ${isLeftSub ? '减' : '加'} ${b} 等于 ${c} ${isRightAdd ? '加' : '减'} 几呢？先算出等号左边等于 ${midVal}，再想右边 ${c} ${isRightAdd ? '加' : '减'} 几也等于 ${midVal} 吧！`;
       const praiseText = `太牛啦！等号左边 ${leftExpr} 等于 ${midVal}，右边 ${c} ${rightOp} ${correctAnswer} 也等于 ${midVal}，两边完全平衡！`;
 
       // 针对最常见错因：把左边的得数 midVal 直接填进横线 (例如 8 - 3 = 2 + 5)
@@ -2763,7 +2756,7 @@ class MathGameApp {
         subType: 'q5b'
       };
 
-      this.questionTextEl.innerHTML = `<span class="ktest-en-tag">${titleEn}</span> <span>${titleZh}</span>`;
+      this.questionTextEl.innerHTML = `<span>${titleZh}</span>`;
 
       card.innerHTML = `
         <div class="q5-balance-eq-box">
